@@ -1,6 +1,6 @@
 # BioVerse
 
-Karnataka PU Biology learning platform — KCET/NEET exam prep. Real Supabase
+PU Biology learning platform — KCET/NEET exam prep. Real Supabase
 backend (Auth, Postgres, Storage), React 18 + Vite.
 
 ## Project status (as of this export)
