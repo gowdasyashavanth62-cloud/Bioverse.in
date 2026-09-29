@@ -1,11 +1,5 @@
--- ═══════════════════════════════════════════════════════════════════════
--- BioVerse — Step 2: Core Schema
--- Run this entire file in: Supabase Dashboard → SQL Editor → New Query → Run
--- ═══════════════════════════════════════════════════════════════════════
-
 create extension if not exists pgcrypto;
 
--- ─── updated_at helper ────────────────────────────────────────────────
 create or replace function set_updated_at()
 returns trigger as $$
 begin
@@ -14,7 +8,6 @@ begin
 end;
 $$ language plpgsql;
 
--- ─── USERS (public profile, 1:1 with auth.users) ─────────────────────
 create table public.users (
   id                 uuid primary key references auth.users(id) on delete cascade,
   email              text unique not null,
@@ -35,8 +28,6 @@ create index idx_users_role on public.users(role);
 create trigger trg_users_updated_at before update on public.users
   for each row execute function set_updated_at();
 
--- Auto-create a profile row whenever someone signs up via Supabase Auth.
--- Role always defaults to 'student' here — the client can never set it.
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -56,7 +47,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ─── UNITS / CHAPTERS (syllabus hierarchy) ────────────────────────────
 create table public.units (
   id            uuid primary key default gen_random_uuid(),
   name          text not null,
@@ -78,7 +68,6 @@ create table public.chapters (
 );
 create index idx_chapters_unit on public.chapters(unit_id);
 
--- ─── CONTENT: videos / notes / questions / tests ──────────────────────
 create table public.videos (
   id            uuid primary key default gen_random_uuid(),
   chapter_id    uuid not null references public.chapters(id) on delete cascade,
@@ -127,7 +116,6 @@ create table public.tests (
 );
 create index idx_tests_chapter on public.tests(chapter_id);
 
--- ─── STUDENT ACTIVITY: progress / results / subscriptions / notifications ─
 create table public.progress (
   id            uuid primary key default gen_random_uuid(),
   student_id    uuid not null references public.users(id) on delete cascade,
@@ -160,7 +148,7 @@ create index idx_subscriptions_student on public.subscriptions(student_id);
 
 create table public.notifications (
   id          uuid primary key default gen_random_uuid(),
-  user_id     uuid references public.users(id) on delete cascade, -- null = broadcast to everyone
+  user_id     uuid references public.users(id) on delete cascade,
   title       text not null,
   body        text,
   type        text default 'Content',
@@ -169,7 +157,6 @@ create table public.notifications (
 );
 create index idx_notifications_user on public.notifications(user_id);
 
--- ─── COMMUNITY ─────────────────────────────────────────────────────────
 create table public.community_posts (
   id          uuid primary key default gen_random_uuid(),
   author_id   uuid not null references public.users(id) on delete cascade,
@@ -188,7 +175,6 @@ create table public.community_replies (
 );
 create index idx_replies_post on public.community_replies(post_id);
 
--- ─── PAYMENTS ───────────────────────────────────────────────────────────
 create table public.payments (
   id                    uuid primary key default gen_random_uuid(),
   student_id            uuid not null references public.users(id) on delete cascade,
@@ -199,7 +185,3 @@ create table public.payments (
   created_at            timestamptz not null default now()
 );
 create index idx_payments_student on public.payments(student_id);
-
--- ═══════════════════════════════════════════════════════════════════════
--- End of Step 2 core schema.
--- ═══════════════════════════════════════════════════════════════════════

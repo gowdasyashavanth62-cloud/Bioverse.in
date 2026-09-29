@@ -2,26 +2,38 @@
   "name": "bioverse",
   "version": "1.0.0",
   "private": true,
-  "description": "BioVerse — Karnataka PU Biology learning platform (KCET/NEET prep)",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:singlefile": "BUILD_SINGLEFILE=true vite build --outDir dist-singlefile",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx,js,jsx"
+    "sync:test-source": "node scripts/sync-app-under-test.mjs",
+    "pretest": "npm run sync:test-source",
+    "test": "vitest run --config vitest.config.ts",
+    "pretest:watch": "npm run sync:test-source",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "pdfjs-dist": "3.11.174",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0",
+    "vite-plugin-singlefile": "^2.3.3"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.34.3",
-    "eslint-plugin-react-hooks": "^4.6.2",
+    "jsdom": "^30.0.1",
     "typescript": "^5.5.3",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^1.6.0"
   }
 }
