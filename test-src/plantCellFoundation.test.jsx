@@ -176,7 +176,7 @@ describe("Plant Cell (dg8) — no production regression on dg1-dg7", () => {
   });
 
   it("DIAGRAM_DATA now has exactly 10 diagrams (as of DG10)", () => {
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.length).toBe(12);
   });
 
   it("the existing SVG registry still has all prior components alongside the new plantCell entry", () => {

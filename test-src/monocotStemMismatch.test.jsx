@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram } from "./AppUnderTest.jsx";
 
-const root = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg9"));
+const root = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg12"));
 const ROOT_IDS = root.structures.map(s => s.id);
 const NAMES = root.structures.map(s => s.name);
 const TOTAL = root.structures.length; // 9
@@ -49,10 +49,10 @@ function readPuzzle(container) {
   return puzzle;
 }
 
-describe("Dicot Root (dg9) Mismatch Mode -- loads via Diagram Center, generic mode", () => {
-  it("T.S. of a Dicot Root -> Find Mismatched Labels loads through Diagram Center", () => {
+describe("Monocot Stem (dg12) Mismatch Mode -- loads via Diagram Center, generic mode", () => {
+  it("T.S. of a Monocot Stem -> Find Mismatched Labels loads through Diagram Center", () => {
     render(<DiagramCenter />);
-    fireEvent.click(screen.getByText("T.S. of a Dicot Root"));
+    fireEvent.click(screen.getByText("T.S. of a Monocot Stem"));
     fireEvent.click(screen.getByText("🔀 Find Mismatched Labels"));
     expect(screen.getByText(`0 / ${TOTAL} Labels Checked`)).toBeInTheDocument();
   });
@@ -67,7 +67,7 @@ describe("Dicot Root (dg9) Mismatch Mode -- loads via Diagram Center, generic mo
   });
 });
 
-describe("Dicot Root (dg9) Mismatch-generation invariants", () => {
+describe("Monocot Stem (dg12) Mismatch-generation invariants", () => {
   it("every puzzle contains between 2 and 8 genuine mismatches -- a guaranteed (not probabilistic) invariant for n=9", () => {
     // buildMismatchChallenge's mismatchCount formula for n=9 structures is
     // min(max(2 + floor(rand*(9-2)), 2), 9-1) = min(max(2..8, 2), 8), which
@@ -98,7 +98,7 @@ describe("Dicot Root (dg9) Mismatch-generation invariants", () => {
     expect(pinnedNames.slice().sort()).toEqual([...NAMES].sort());
   });
 
-  it("every label belongs to dg9 (no unknown/foreign labels appear)", () => {
+  it("every label belongs to dg12 (no unknown/foreign labels appear)", () => {
     const { container } = openMismatchMode();
     const puzzle = readPuzzle(container);
     Object.values(puzzle).forEach(p => expect(NAMES).toContain(p.pinnedName));
@@ -189,7 +189,7 @@ describe("Dicot Root (dg9) Mismatch-generation invariants", () => {
   });
 });
 
-describe("Dicot Root (dg9) Mismatch Mode -- gameplay / scoring", () => {
+describe("Monocot Stem (dg12) Mismatch Mode -- gameplay / scoring", () => {
   it("correctly identifying a genuine mismatch increments progress exactly once and locks the chip", () => {
     const { container } = openMismatchMode();
     const puzzle = readPuzzle(container);
@@ -272,9 +272,9 @@ describe("Dicot Root (dg9) Mismatch Mode -- gameplay / scoring", () => {
   });
 });
 
-describe("Dicot Root (dg9) Mismatch Mode -- XP", () => {
+describe("Monocot Stem (dg12) Mismatch Mode -- XP", () => {
   it("XP reward is exactly 65, and completion awards exactly 65, once", () => {
-    expect(DIAGRAM_DATA.find(d => d.id === "dg9").xpReward).toBe(65);
+    expect(DIAGRAM_DATA.find(d => d.id === "dg12").xpReward).toBe(65);
     const { container } = openMismatchMode();
     const puzzle = readPuzzle(container);
     Object.entries(puzzle).forEach(([, p]) => {
@@ -321,7 +321,7 @@ describe("Dicot Root (dg9) Mismatch Mode -- XP", () => {
   });
 });
 
-describe("Dicot Root (dg9) Mismatch Mode -- reset / Play Again", () => {
+describe("Monocot Stem (dg12) Mismatch Mode -- reset / Play Again", () => {
   it("Play Again resets progress, score, and XP to a clean, freshly-generated puzzle that still satisfies the 2-8 mismatch invariant", () => {
     const { container } = openMismatchMode();
     const puzzle = readPuzzle(container);
@@ -352,7 +352,7 @@ describe("Dicot Root (dg9) Mismatch Mode -- reset / Play Again", () => {
   });
 });
 
-describe("Dicot Root (dg9) Mismatch Mode -- mobile / responsive / accessibility", () => {
+describe("Monocot Stem (dg12) Mismatch Mode -- mobile / responsive / accessibility", () => {
   const setWidth = (w) => {
     window.innerWidth = w;
     window.dispatchEvent(new Event("resize"));
@@ -436,7 +436,7 @@ describe("Dicot Root (dg9) Mismatch Mode -- mobile / responsive / accessibility"
   });
 });
 
-describe("Dicot Root (dg9) -- dg1-dg8 regression remains intact", () => {
+describe("Monocot Stem (dg12) -- dg1-dg8 regression remains intact", () => {
   it("dg7 (Prokaryotic Cell) is unmodified: 8 structures, XP 55, Mismatch Mode still loads", () => {
     const dg7 = DIAGRAM_DATA.find(d => d.id === "dg7");
     expect(dg7.structures.length).toBe(8);
@@ -470,16 +470,16 @@ describe("Dicot Root (dg9) -- dg1-dg8 regression remains intact", () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it("the registry and DIAGRAM_DATA contain dg1 through dg10, nothing renamed or removed", () => {
-    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10"].forEach(id => {
+  it("the registry and DIAGRAM_DATA contain dg1 through dg12, nothing renamed or removed", () => {
+    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10", "dg11", "dg12"].forEach(id => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
     expect(DIAGRAM_DATA.length).toBe(12);
   });
 });
 
-describe("Dicot Root (dg9) -- source-level reusability check", () => {
-  it("MismatchMode and buildMismatchChallenge contain no dg9/Dicot-Root-specific hardcoded names or conditionals", async () => {
+describe("Monocot Stem (dg12) -- source-level reusability check", () => {
+  it("MismatchMode and buildMismatchChallenge contain no dg12/Monocot-Root-specific hardcoded names or conditionals", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const { fileURLToPath } = await import("node:url");
@@ -488,9 +488,9 @@ describe("Dicot Root (dg9) -- source-level reusability check", () => {
     const start = source.indexOf("function MismatchMode(");
     const nextFn = source.indexOf("\nfunction DiagramGame(", start);
     const body = source.slice(start, nextFn);
-    const forbidden = ["Epidermis", "Cortex", "Endodermis", "Pericycle", "Xylem", "Phloem", "Cambium", "Pith", "Lateral Root"];
+    const forbidden = ["Epidermis", "Hypodermis", "Ground Tissue", "Vascular Bundle", "Bundle Sheath", "Phloem", "Water-containing Cavity", "Protoxylem", "Metaxylem"];
     forbidden.forEach(word => expect(body.includes(word)).toBe(false));
-    expect(body.includes('diagram.id === "dg9"')).toBe(false);
+    expect(body.includes('diagram.id === "dg12"')).toBe(false);
 
     const genStart = source.indexOf("function buildMismatchChallenge(");
     const genEnd = source.indexOf("\n}\n", genStart) + 1;

@@ -154,7 +154,7 @@ describe("Prokaryotic Cell (dg7) — integrity of existing six diagrams", () => 
   });
 
   it("DIAGRAM_DATA had exactly 7 diagrams as of dg7 (Step 20A) — 8 after dg8 (Plant Cell) — 9 after dg9 (Dicot Root) — now 10 after dg10 (Dicot Stem)", () => {
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.length).toBe(12);
   });
 });
 

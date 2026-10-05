@@ -332,11 +332,11 @@ describe("Dicot Stem (dg10) — regression: prior diagrams untouched", () => {
   });
 
   it("DIAGRAM_DATA now has exactly 10 diagrams (DG1–DG9 plus the new DG10)", () => {
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.length).toBe(12);
   });
 
   it("DG11 has not been started", () => {
-    expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeFalsy();
+    expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
   });
 
   it("dg8's and dg9's own XP and structure counts are unchanged by adding dg10", () => {

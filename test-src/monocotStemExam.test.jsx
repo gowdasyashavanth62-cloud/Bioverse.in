@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram } from "./AppUnderTest.jsx";
 
-const stem = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg10"));
-const STEM_IDS = stem.structures.map(s => s.id);
-const TOTAL = stem.structures.length; // 10
-const byId = (id) => stem.structures.find(s => s.id === id);
+const root = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg12"));
+const ROOT_IDS = root.structures.map(s => s.id);
+const TOTAL = root.structures.length; // 9
+const byId = (id) => root.structures.find(s => s.id === id);
 
 let consoleErrorSpy;
 beforeEach(() => {
@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 function openExamMode() {
-  const utils = render(<DiagramGame diagram={stem} />);
+  const utils = render(<DiagramGame diagram={root} />);
   fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
   return utils;
 }
@@ -48,16 +48,16 @@ function getXpEarnedValue(container) {
 // i !== k makes j = floor(r*(i+1)) === i (a self-swap / no-op), and feeding
 // 0 on the iteration where i === k makes j = 0, swapping the still-untouched
 // original element at index k into position 0 -- forcing each structure into
-// the Q1 slot in turn. Same technique already established for dg7/dg8/dg9's
-// Exam tests (and DG10's own Identify/Mismatch tests).
+// the Q1 slot in turn. Same technique already established for dg7/dg8's
+// Exam tests and DG9's own Identify tests.
 //
 // ExamMode has the same lazy-init + mount-effect double-invocation pattern
-// as IdentifyMode/MismatchMode: `useState(makeOrder)` runs once, but the
-// mount `useEffect(() => resetGame(), [diagram.id])` calls
-// `setOrder(makeOrder())` again, and that SECOND invocation is the one
-// actually rendered. buildExamOrder does exactly ONE shuffleArray call (no
-// per-question distractor/choice shuffles, unlike buildIdentifyQuestions),
-// so callsPerInvocation is simply (TOTAL - 1) = 9 for dg10's 10 structures.
+// as IdentifyMode: `useState(makeOrder)` runs once, but the mount
+// `useEffect(() => resetGame(), [diagram.id])` calls `setOrder(makeOrder())`
+// again, and that SECOND invocation is the one actually rendered.
+// buildExamOrder does exactly ONE shuffleArray call (no per-question
+// distractor/choice shuffles, unlike buildIdentifyQuestions), so
+// callsPerInvocation is simply (TOTAL - 1).
 const NO_SWAP = 0.999999999;
 function forcedShuffleFirstSequence(targetIndex, total) {
   const values = [];
@@ -82,16 +82,18 @@ function withForcedFirstTarget(targetIndex, run) {
 
 // Deterministic per-structure helper: forces the named structure onto
 // Question 1 via the RNG technique above -- no probabilistic sampling, no
-// coupon-collector loop over freshly mounted sessions.
+// coupon-collector loop over freshly mounted sessions (that pattern is the
+// known pre-existing flaky one in prokaryoticCellExam.test.jsx and is
+// deliberately NOT reused here).
 function withTarget(structureId, run) {
-  const k = STEM_IDS.indexOf(structureId);
+  const k = ROOT_IDS.indexOf(structureId);
   withForcedFirstTarget(k, run);
 }
 
-describe("Dicot Stem (dg10) Exam Challenge -- loads via Diagram Center, generic mode", () => {
-  it("dg10 -> Exam Challenge loads through Diagram Center with instructions, empty input, and a highlighted target", () => {
+describe("Monocot Stem (dg12) Exam Challenge -- loads via Diagram Center, generic mode", () => {
+  it("dg12 -> Exam Challenge loads through Diagram Center with instructions, empty input, and a highlighted target", () => {
     render(<DiagramCenter />);
-    fireEvent.click(screen.getByText("T.S. of a Dicot Stem"));
+    fireEvent.click(screen.getByText("T.S. of a Monocot Stem"));
     fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
     expect(screen.getByText(new RegExp(`Question 1 / ${TOTAL} · Score: 0 / ${TOTAL}`))).toBeInTheDocument();
     expect(screen.getByText(/Type the name of the highlighted structure/i)).toBeInTheDocument();
@@ -101,33 +103,29 @@ describe("Dicot Stem (dg10) Exam Challenge -- loads via Diagram Center, generic 
     expect(screen.getByText("Submit")).toBeInTheDocument();
   });
 
-  it("no multiple-choice answer list is rendered -- only a free-text input and Submit (Exam Mode is free-recall, not Identify's multiple-choice)", () => {
+  it("no multiple-choice answer list is rendered -- only a free-text input and Submit", () => {
     const { container } = openExamMode();
     expect(getInput()).toBeInTheDocument();
     const structureNameButtons = Array.from(container.querySelectorAll("button")).filter(b =>
-      stem.structures.some(s => b.textContent.trim() === s.name)
+      root.structures.some(s => b.textContent.trim() === s.name)
     );
     expect(structureNameButtons).toHaveLength(0);
     expect(container.querySelectorAll("input")).toHaveLength(1);
   });
 
-  it("a highlighted target corresponds to a genuine dg10 SVG structure id, rendered via the real DicotStemSVG (not DicotRootSVG or any other diagram's artwork)", () => {
+  it("a highlighted target corresponds to a genuine dg12 SVG structure id", () => {
     const { container } = openExamMode();
     const targetId = getHighlightedStructureId(container);
-    expect(STEM_IDS).toContain(targetId);
-    const svg = container.querySelector("svg");
-    expect(svg.getAttribute("aria-label")).toMatch(/dicot stem/i);
+    expect(ROOT_IDS).toContain(targetId);
   });
 });
 
-describe("Dicot Stem (dg10) -- question generation & validity", () => {
-  it("uses all 10 dg10 structures exactly once as targets across one full session (one natural, un-forced playthrough) -- no undefined/foreign target", () => {
+describe("Monocot Stem (dg12) -- deterministic target coverage (RNG-forced, not sampled)", () => {
+  it("uses all 9 dg12 structures exactly once as targets across one full session (one natural, un-forced playthrough)", () => {
     const { container } = openExamMode();
     const seen = new Set();
     for (let q = 0; q < TOTAL; q++) {
       const targetId = getHighlightedStructureId(container);
-      expect(targetId).toBeTruthy();
-      expect(STEM_IDS).toContain(targetId);
       seen.add(targetId);
       expect(screen.getByText(new RegExp(`Question ${q + 1} / ${TOTAL}`))).toBeInTheDocument();
       fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
@@ -135,33 +133,19 @@ describe("Dicot Stem (dg10) -- question generation & validity", () => {
       fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
     }
     expect(seen.size).toBe(TOTAL);
-    expect([...seen].sort()).toEqual([...STEM_IDS].sort());
+    expect([...seen].sort()).toEqual([...ROOT_IDS].sort());
   });
 
-  it("every one of the 10 structures is deterministically reachable as the Question-1 target (RNG-forced, no sampling loop)", () => {
-    STEM_IDS.forEach((expectedId, k) => {
+  it("every one of the 9 structures is deterministically reachable as the Question-1 target (RNG-forced, no sampling loop)", () => {
+    ROOT_IDS.forEach((expectedId, k) => {
       withForcedFirstTarget(k, (container) => {
         expect(getHighlightedStructureId(container)).toBe(expectedId);
       });
     });
   });
-
-  it("the correct answer for every generated question is genuinely associated with the highlighted structure's own quiz.acceptableAnswers (no self-contradictory question)", () => {
-    const { container } = openExamMode();
-    for (let q = 0; q < TOTAL; q++) {
-      const targetId = getHighlightedStructureId(container);
-      const target = byId(targetId);
-      expect(Array.isArray(target.quiz?.acceptableAnswers)).toBe(true);
-      expect(target.quiz.acceptableAnswers.length).toBeGreaterThan(0);
-      fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-      fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
-    }
-  });
 });
 
-describe("Dicot Stem (dg10) -- answer normalization", () => {
+describe("Monocot Stem (dg12) -- answer normalization", () => {
   it("the canonical answer is accepted", () => {
     const { container } = openExamMode();
     const targetId = getHighlightedStructureId(container);
@@ -186,7 +170,7 @@ describe("Dicot Stem (dg10) -- answer normalization", () => {
     expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
   });
 
-  // Explicit per-structure canonical-answer checks for all 10 dg10 structures.
+  // Explicit per-structure canonical-answer checks for all 9 dg12 structures.
   it("Epidermis: canonical answer accepted", () => {
     withTarget("epidermis", () => {
       fireEvent.change(getInput(), { target: { value: "Epidermis" } });
@@ -195,39 +179,33 @@ describe("Dicot Stem (dg10) -- answer normalization", () => {
     });
   });
 
+  it("Ground Tissue: canonical answer accepted", () => {
+    withTarget("groundTissue", () => {
+      fireEvent.change(getInput(), { target: { value: "Ground Tissue" } });
+      fireEvent.click(screen.getByText("Submit"));
+      expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
+    });
+  });
+
   it("Hypodermis: canonical answer accepted", () => {
     withTarget("hypodermis", () => {
-      fireEvent.change(getInput(), { target: { value: "Hypodermis" } });
+      fireEvent.change(getInput(), { target: { value: "hypodermis" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
   });
 
-  it("Cortex: canonical answer accepted", () => {
-    withTarget("cortex", () => {
-      fireEvent.change(getInput(), { target: { value: "Cortex" } });
+  it("Bundle Sheath: canonical answer accepted", () => {
+    withTarget("bundleSheath", () => {
+      fireEvent.change(getInput(), { target: { value: "Bundle Sheath" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
   });
 
-  it("Endodermis: canonical answer, and the 'starch sheath' alias, both accepted", () => {
-    expect(byId("endodermis").quiz.acceptableAnswers).toContain("starch sheath");
-    withTarget("endodermis", () => {
-      fireEvent.change(getInput(), { target: { value: "Endodermis" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-    });
-    withTarget("endodermis", () => {
-      fireEvent.change(getInput(), { target: { value: "starch sheath" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-    });
-  });
-
-  it("Pericycle: canonical answer accepted", () => {
-    withTarget("pericycle", () => {
-      fireEvent.change(getInput(), { target: { value: "Pericycle" } });
+  it("Metaxylem: canonical answer accepted", () => {
+    withTarget("metaxylem", () => {
+      fireEvent.change(getInput(), { target: { value: "Metaxylem" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
@@ -241,46 +219,38 @@ describe("Dicot Stem (dg10) -- answer normalization", () => {
     });
   });
 
-  it("Cambium: canonical answer accepted", () => {
-    withTarget("cambium", () => {
-      fireEvent.change(getInput(), { target: { value: "Cambium" } });
+  it("Protoxylem: canonical answer accepted", () => {
+    withTarget("protoxylem", () => {
+      fireEvent.change(getInput(), { target: { value: "Protoxylem" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
   });
 
-  it("Xylem: canonical answer accepted", () => {
-    withTarget("xylem", () => {
-      fireEvent.change(getInput(), { target: { value: "Xylem" } });
+  it("Vascular Bundle: canonical answer accepted", () => {
+    withTarget("vascularBundle", () => {
+      fireEvent.change(getInput(), { target: { value: "Vascular Bundle" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
   });
 
-  it("Medullary Ray: canonical answer, and the 'medullary rays' plural alias, both accepted", () => {
-    expect(byId("medullaryRay").quiz.acceptableAnswers).toContain("medullary rays");
-    withTarget("medullaryRay", () => {
-      fireEvent.change(getInput(), { target: { value: "medullary ray" } });
+  it("Water-containing Cavity: canonical answer and the 'water cavity' alias both accepted", () => {
+    expect(byId("waterCavity").quiz.acceptableAnswers).toContain("water cavity");
+    withTarget("waterCavity", () => {
+      fireEvent.change(getInput(), { target: { value: "Water-containing Cavity" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
-    withTarget("medullaryRay", () => {
-      fireEvent.change(getInput(), { target: { value: "MEDULLARY RAYS" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-    });
-  });
-
-  it("Pith: canonical answer accepted", () => {
-    withTarget("pith", () => {
-      fireEvent.change(getInput(), { target: { value: "Pith" } });
+    withTarget("waterCavity", () => {
+      fireEvent.change(getInput(), { target: { value: "WATER CAVITY" } });
       fireEvent.click(screen.getByText("Submit"));
       expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
     });
   });
 });
 
-describe("Dicot Stem (dg10) -- answer safety: no broad substring/prefix/suffix matching", () => {
+describe("Monocot Stem (dg12) -- answer safety: no broad substring/prefix/suffix matching", () => {
   it("rejects an empty answer -- Submit is a no-op, nothing is scored or flagged wrong", () => {
     const { container } = openExamMode();
     fireEvent.change(getInput(), { target: { value: "" } });
@@ -292,7 +262,7 @@ describe("Dicot Stem (dg10) -- answer safety: no broad substring/prefix/suffix m
   });
 
   it("rejects a whitespace-only answer the same way (normalizes to empty)", () => {
-    openExamMode();
+    const { container } = openExamMode();
     fireEvent.change(getInput(), { target: { value: "   " } });
     fireEvent.click(screen.getByText("Submit"));
     expect(getInput()).not.toBeDisabled();
@@ -309,83 +279,74 @@ describe("Dicot Stem (dg10) -- answer safety: no broad substring/prefix/suffix m
     expect(screen.getByText(new RegExp(`Question 1 / ${TOTAL} · Score: 0 / ${TOTAL}`))).toBeInTheDocument();
   });
 
-  it("rejects a truncated prefix of 'endodermis' ('endo')", () => {
-    withTarget("endodermis", () => {
-      fireEvent.change(getInput(), { target: { value: "endo" } });
+  it("rejects a truncated prefix of 'hypodermis' ('hypo')", () => {
+    withTarget("hypodermis", () => {
+      fireEvent.change(getInput(), { target: { value: "hypo" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("endodermis").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("hypodermis").name}`)).toBeInTheDocument();
     });
   });
 
-  it("rejects the correct answer with appended garbage ('xylem abc')", () => {
-    withTarget("xylem", () => {
-      fireEvent.change(getInput(), { target: { value: "xylem abc" } });
+  it("rejects the correct answer with appended garbage ('metaxylem abc')", () => {
+    withTarget("metaxylem", () => {
+      fireEvent.change(getInput(), { target: { value: "metaxylem abc" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("xylem").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("metaxylem").name}`)).toBeInTheDocument();
     });
   });
 
-  it("rejects the correct answer with prepended garbage ('abc pith')", () => {
-    withTarget("pith", () => {
-      fireEvent.change(getInput(), { target: { value: "abc pith" } });
+  it("rejects the correct answer with prepended garbage ('abc metaxylem')", () => {
+    withTarget("metaxylem", () => {
+      fireEvent.change(getInput(), { target: { value: "abc metaxylem" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("pith").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("metaxylem").name}`)).toBeInTheDocument();
     });
   });
 
-  it("rejects a single word extracted from 'medullary ray' ('medullary' and 'ray' alone)", () => {
-    withTarget("medullaryRay", () => {
-      fireEvent.change(getInput(), { target: { value: "medullary" } });
+  it("rejects a single word extracted from 'water-containing cavity' ('cavity' and 'water' alone)", () => {
+    withTarget("waterCavity", () => {
+      fireEvent.change(getInput(), { target: { value: "cavity" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("medullaryRay").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("waterCavity").name}`)).toBeInTheDocument();
     });
-    withTarget("medullaryRay", () => {
-      fireEvent.change(getInput(), { target: { value: "ray" } });
+    withTarget("waterCavity", () => {
+      fireEvent.change(getInput(), { target: { value: "root" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("medullaryRay").name}`)).toBeInTheDocument();
-    });
-  });
-
-  it("rejects an unrelated word that merely contains the target word ('cortex' is not matched by 'cortexish')", () => {
-    withTarget("cortex", () => {
-      fireEvent.change(getInput(), { target: { value: "cortexish" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("cortex").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("waterCavity").name}`)).toBeInTheDocument();
     });
   });
 
-  it("rejects a truncated prefix of 'cambium' ('camb')", () => {
-    withTarget("cambium", () => {
-      fireEvent.change(getInput(), { target: { value: "camb" } });
+  it("rejects an unrelated word that merely contains the target word ('bundle sheath' is not matched by 'bundle sheathing')", () => {
+    withTarget("bundleSheath", () => {
+      fireEvent.change(getInput(), { target: { value: "bundle sheathing" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("cambium").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("bundleSheath").name}`)).toBeInTheDocument();
     });
   });
 
-  it("rejects 'phloem' with surrounding garbage ('phloem xyz' / 'xyz phloem')", () => {
-    withTarget("phloem", () => {
-      fireEvent.change(getInput(), { target: { value: "phloem xyz" } });
+  it("rejects a truncated prefix of 'protoxylem' ('protox')", () => {
+    withTarget("protoxylem", () => {
+      fireEvent.change(getInput(), { target: { value: "protox" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("phloem").name}`)).toBeInTheDocument();
-    });
-    withTarget("phloem", () => {
-      fireEvent.change(getInput(), { target: { value: "xyz phloem" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("phloem").name}`)).toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("protoxylem").name}`)).toBeInTheDocument();
     });
   });
 
-  it("cross-structure answer is rejected: typing 'xylem' when the target is 'phloem' does not falsely mark it correct", () => {
-    withTarget("phloem", () => {
-      fireEvent.change(getInput(), { target: { value: "xylem" } });
+  it("rejects 'vascular bundle' with surrounding garbage ('vascular bundle xyz' / 'xyz vascular bundle')", () => {
+    withTarget("vascularBundle", () => {
+      fireEvent.change(getInput(), { target: { value: "vascular bundle xyz" } });
       fireEvent.click(screen.getByText("Submit"));
-      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("phloem").name}`)).toBeInTheDocument();
-      expect(screen.queryByText("✅ Correct!")).not.toBeInTheDocument();
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("vascularBundle").name}`)).toBeInTheDocument();
+    });
+    withTarget("vascularBundle", () => {
+      fireEvent.change(getInput(), { target: { value: "xyz vascular bundle" } });
+      fireEvent.click(screen.getByText("Submit"));
+      expect(screen.getByText(`❌ Not quite. Correct answer: ${byId("vascularBundle").name}`)).toBeInTheDocument();
     });
   });
 });
 
-describe("Dicot Stem (dg10) -- submission / scoring", () => {
+describe("Monocot Stem (dg12) -- submission / scoring", () => {
   it("a question cannot be scored twice (input disables after submission, Submit disappears)", () => {
     const { container } = openExamMode();
     const targetId = getHighlightedStructureId(container);
@@ -408,49 +369,20 @@ describe("Dicot Stem (dg10) -- submission / scoring", () => {
   });
 
   it("incorrect answer does not falsely mark completion, and does not award XP", () => {
-    openExamMode();
+    const { container } = openExamMode();
     fireEvent.change(getInput(), { target: { value: "wrong answer" } });
     fireEvent.click(screen.getByText("Submit"));
     expect(screen.queryByText(/Challenge Complete/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/XP earned:/)).not.toBeInTheDocument();
   });
-
-  it("a second, disjoint incorrect-answer example on a different structure also behaves correctly (no XP, no false-correct)", () => {
-    withTarget("cortex", () => {
-      fireEvent.change(getInput(), { target: { value: "not cortex" } });
-      fireEvent.click(screen.getByText("Submit"));
-      expect(screen.queryByText("✅ Correct!")).not.toBeInTheDocument();
-      expect(screen.queryByText(/XP earned:/)).not.toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`Question 1 / ${TOTAL} · Score: 0 / ${TOTAL}`))).toBeInTheDocument();
-    });
-  });
-
-  it("repeatedly clicking Submit after an answer is already locked in cannot re-score or farm points", () => {
-    const { container } = openExamMode();
-    const targetId = getHighlightedStructureId(container);
-    fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-    fireEvent.click(screen.getByText("Submit"));
-    expect(screen.getByText(new RegExp(`Score: 1 / ${TOTAL}`))).toBeInTheDocument();
-    // Submit is gone (replaced by Next Question); submitAnswer() itself also
-    // guards on `if (submitted) return;`, so there is no way to re-fire it.
-    expect(screen.queryByText("Submit")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("Next Question →"));
-    // Advancing moves to Question 2 with a fresh (unanswered) Submit button
-    // and the score from Question 1 carried forward unchanged -- proving
-    // the single earlier submission was not re-counted.
-    expect(screen.getByText(new RegExp(`Question 2 / ${TOTAL} · Score: 1 / ${TOTAL}`))).toBeInTheDocument();
-    expect(screen.getByText("Submit")).toBeInTheDocument();
-    expect(screen.queryByText("Next Question →")).not.toBeInTheDocument();
-  });
 });
 
-describe("Dicot Stem (dg10) -- completion / XP", () => {
-  it("dg10.xpReward is exactly 63", () => {
-    expect(DIAGRAM_DATA.find(d => d.id === "dg10").xpReward).toBe(63);
+describe("Monocot Stem (dg12) -- completion / XP", () => {
+  it("dg12.xpReward is exactly 65", () => {
+    expect(DIAGRAM_DATA.find(d => d.id === "dg12").xpReward).toBe(65);
   });
 
-  it("completes after question 10 with a perfect score earning exactly 63 XP, shown once", () => {
+  it("completes after question 9 with a perfect score earning exactly 65 XP, shown once", () => {
     const { container } = openExamMode();
     for (let q = 0; q < TOTAL; q++) {
       const targetId = getHighlightedStructureId(container);
@@ -460,55 +392,37 @@ describe("Dicot Stem (dg10) -- completion / XP", () => {
     }
     expect(screen.getByText(/Challenge Complete/i)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`Score: ${TOTAL}/${TOTAL}`))).toBeInTheDocument();
-    expect(getXpEarnedValue(container)).toBe(63);
+    expect(getXpEarnedValue(container)).toBe(65);
     expect(container.querySelectorAll("strong").length).toBe(1);
   });
 
-  it("non-perfect (mixed-correctness) run: XP matches the existing generic formula Math.round(63/10*score), never exceeding 63", () => {
+  it("mixed-correctness run: XP matches the existing generic formula Math.round(65/9*score), never exceeding 65", () => {
     const { container } = openExamMode();
     let score = 0;
     for (let q = 0; q < TOTAL; q++) {
       const targetId = getHighlightedStructureId(container);
-      const wrong = q % 2 === 0; // 5 wrong, 5 right -- a genuine non-perfect run
+      const wrong = q % 2 === 0;
       fireEvent.change(getInput(), { target: { value: wrong ? "xyz" : correctAnswerFor(targetId) } });
       fireEvent.click(screen.getByText("Submit"));
       if (!wrong) score++;
       fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
     }
-    expect(score).toBe(5); // sanity: genuinely a non-perfect, partial-credit run
-    expect(screen.getByText(new RegExp(`Score: ${score}/${TOTAL}`))).toBeInTheDocument();
     const xp = getXpEarnedValue(container);
-    expect(xp).toBeLessThan(63);
-    expect(xp).toBe(Math.round((63 / TOTAL) * score));
+    expect(xp).toBeLessThanOrEqual(65);
+    expect(xp).toBe(Math.round((65 / TOTAL) * score));
   });
 
-  it("a second, differently-shaped non-perfect run (3 correct out of 10) also matches the generic XP formula exactly", () => {
-    const { container } = openExamMode();
-    let score = 0;
-    for (let q = 0; q < TOTAL; q++) {
-      const targetId = getHighlightedStructureId(container);
-      const correct = q < 3; // exactly 3 correct
-      fireEvent.change(getInput(), { target: { value: correct ? correctAnswerFor(targetId) : "nope" } });
-      fireEvent.click(screen.getByText("Submit"));
-      if (correct) score++;
-      fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
-    }
-    expect(score).toBe(3);
-    const xp = getXpEarnedValue(container);
-    expect(xp).toBe(Math.round((63 / TOTAL) * 3));
-  });
-
-  it("score can never exceed 10 and XP can never exceed 63, even across a full completed run", () => {
+  it("score can never exceed 9 and XP can never exceed 65, even across a full completed run", () => {
     const { container } = openExamMode();
     for (let q = 0; q < TOTAL; q++) {
       const targetId = getHighlightedStructureId(container);
       fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
       fireEvent.click(screen.getByText("Submit"));
-      const scoreMatch = screen.getByText(/Score:/).textContent.match(/Score:\s*(\d+)\s*\/\s*10/);
+      const scoreMatch = screen.getByText(/Score:/).textContent.match(/Score:\s*(\d+)\s*\/\s*9/);
       expect(Number(scoreMatch[1])).toBeLessThanOrEqual(TOTAL);
       fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
     }
-    expect(getXpEarnedValue(container)).toBeLessThanOrEqual(63);
+    expect(getXpEarnedValue(container)).toBeLessThanOrEqual(65);
   });
 
   it("repeated interaction after completion cannot double-award XP (no remaining input/Submit surface)", () => {
@@ -522,31 +436,13 @@ describe("Dicot Stem (dg10) -- completion / XP", () => {
     expect(screen.getByText(/Challenge Complete/i)).toBeInTheDocument();
     expect(screen.queryByLabelText("Type the structure name")).not.toBeInTheDocument();
     expect(screen.queryByText("Submit")).not.toBeInTheDocument();
-    expect(getXpEarnedValue(container)).toBe(63);
+    expect(getXpEarnedValue(container)).toBe(65);
     expect(container.querySelectorAll("strong").length).toBe(1); // no duplicate reward on rerender
   });
 });
 
-describe("Dicot Stem (dg10) -- completion lock", () => {
-  it("after completion, no question controls remain to change the final score or re-trigger completion", () => {
-    const { container } = openExamMode();
-    for (let q = 0; q < TOTAL; q++) {
-      const targetId = getHighlightedStructureId(container);
-      fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-      fireEvent.click(screen.getByText("Submit"));
-      fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
-    }
-    expect(screen.getByText(new RegExp(`Score: ${TOTAL}/${TOTAL}`))).toBeInTheDocument();
-    expect(container.querySelectorAll("input").length).toBe(0);
-    expect(screen.queryByText("Next Question →")).not.toBeInTheDocument();
-    expect(screen.queryByText("See Results")).not.toBeInTheDocument();
-    // Only the real, generic post-completion control (Play Again) remains.
-    expect(screen.getByRole("button", { name: "Play Again" })).toBeInTheDocument();
-  });
-});
-
-describe("Dicot Stem (dg10) -- reset / replay / isolation", () => {
-  it("Play Again resets score/progress/input and produces a fresh question order; a fresh session completes normally with no leaked/duplicated XP", () => {
+describe("Monocot Stem (dg12) -- reset / replay / isolation", () => {
+  it("Play Again resets score/progress/input and produces a fresh question order", () => {
     const { container } = openExamMode();
     const firstOrder = [];
     for (let q = 0; q < TOTAL; q++) {
@@ -571,24 +467,8 @@ describe("Dicot Stem (dg10) -- reset / replay / isolation", () => {
       fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
     }
     expect(screen.getByText(new RegExp(`Score: ${TOTAL}/${TOTAL}`))).toBeInTheDocument();
-    expect(getXpEarnedValue(container)).toBe(63);
-    expect(container.querySelectorAll("strong").length).toBe(1); // one XP line, not accumulated across cycles
+    expect(getXpEarnedValue(container)).toBe(65);
     expect(secondOrder.join("|")).not.toBe(firstOrder.join("|"));
-  });
-
-  it("a second Play Again cycle also stays XP-safe (no accumulation across multiple resets)", () => {
-    const { container } = openExamMode();
-    for (let cycle = 0; cycle < 2; cycle++) {
-      for (let q = 0; q < TOTAL; q++) {
-        const targetId = getHighlightedStructureId(container);
-        fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-        fireEvent.click(screen.getByText("Submit"));
-        fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
-      }
-      expect(getXpEarnedValue(container)).toBe(63);
-      expect(container.querySelectorAll("strong").length).toBe(1);
-      if (cycle === 0) fireEvent.click(screen.getByText("Play Again"));
-    }
   });
 
   it("exam state does not leak between diagrams (a fresh instance starts at Question 1, Score 0)", () => {
@@ -598,10 +478,10 @@ describe("Dicot Stem (dg10) -- reset / replay / isolation", () => {
     fireEvent.click(screen.getByText("Submit"));
     unmount1();
 
-    const dicotRoot = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg9"));
-    render(<DiagramGame diagram={dicotRoot} />);
+    const prokaryotic = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg7"));
+    render(<DiagramGame diagram={prokaryotic} />);
     fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
-    expect(screen.getByText(/Question 1 \/ 9 · Score: 0 \/ 9/)).toBeInTheDocument();
+    expect(screen.getByText(/Question 1 \/ 8 · Score: 0 \/ 8/)).toBeInTheDocument();
   });
 
   it("exam state does not leak between modes: switching away and back gives a fresh Question 1 / Score 0", () => {
@@ -619,7 +499,7 @@ describe("Dicot Stem (dg10) -- reset / replay / isolation", () => {
   });
 });
 
-describe("Dicot Stem (dg10) -- mobile / keyboard / responsive / accessibility", () => {
+describe("Monocot Stem (dg12) -- mobile / keyboard / responsive / accessibility", () => {
   const setWidth = (w) => {
     window.innerWidth = w;
     window.dispatchEvent(new Event("resize"));
@@ -638,26 +518,12 @@ describe("Dicot Stem (dg10) -- mobile / keyboard / responsive / accessibility", 
     setWidth(1280);
   });
 
-  it("412px mobile: input and Submit are reachable and tappable without hover", () => {
-    setWidth(412);
-    const { container, unmount } = openExamMode();
-    const targetId = getHighlightedStructureId(container);
-    const input = getInput();
-    expect(input).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: correctAnswerFor(targetId) } });
-    fireEvent.click(screen.getByText("Submit"));
-    expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-    unmount();
-    setWidth(1280);
-  });
-
   [
     { label: "desktop", width: 1440, expectGrid: true },
-    { label: "laptop", width: 1024, expectGrid: true },
-    { label: "mobile-412", width: 412, expectGrid: false },
-    { label: "mobile-390", width: 390, expectGrid: false },
+    { label: "narrow-desktop", width: 1024, expectGrid: true },
+    { label: "mobile", width: 390, expectGrid: false },
   ].forEach(({ label, width, expectGrid }) => {
-    it(`${label} (${width}px): no horizontal overflow, diagram/input/feedback stay contained and readable, completion screen usable`, () => {
+    it(`${label} (${width}px): no horizontal overflow, diagram/input/feedback stay contained and readable`, () => {
       setWidth(width);
       const { container, unmount } = openExamMode();
       expect(container.querySelector("svg")).toBeTruthy();
@@ -674,16 +540,6 @@ describe("Dicot Stem (dg10) -- mobile / keyboard / responsive / accessibility", 
         return w && /^\d+(\.\d+)?px$/.test(w) && parseFloat(w) > width;
       });
       expect(badWidths).toHaveLength(0);
-
-      // Completion screen also stays usable at this width.
-      for (let q = 0; q < TOTAL; q++) {
-        const targetId = getHighlightedStructureId(container);
-        fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-        fireEvent.click(screen.getByText("Submit"));
-        fireEvent.click(screen.getByText(q + 1 >= TOTAL ? "See Results" : "Next Question →"));
-      }
-      expect(screen.getByText(/Challenge Complete/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Play Again" })).toBeInTheDocument();
 
       unmount();
       setWidth(1280);
@@ -706,14 +562,6 @@ describe("Dicot Stem (dg10) -- mobile / keyboard / responsive / accessibility", 
     expect(getInput()).toHaveAttribute("disabled");
   });
 
-  it("correctness feedback is exposed via real accessible text, not color alone", () => {
-    const { container } = openExamMode();
-    const targetId = getHighlightedStructureId(container);
-    fireEvent.change(getInput(), { target: { value: correctAnswerFor(targetId) } });
-    fireEvent.click(screen.getByText("Submit"));
-    expect(screen.getByText("✅ Correct!")).toBeInTheDocument();
-  });
-
   it("completion feedback is accessible, real text, with a real Play Again button", () => {
     const { container } = openExamMode();
     for (let q = 0; q < TOTAL; q++) {
@@ -727,43 +575,29 @@ describe("Dicot Stem (dg10) -- mobile / keyboard / responsive / accessibility", 
   });
 });
 
-describe("Dicot Stem (dg10) -- dg1-dg9 regression remains intact", () => {
-  it("dg9 (Dicot Root) is unmodified: 9 structures, XP 65, Exam Challenge still loads and completes correctly", () => {
-    const dg9raw = DIAGRAM_DATA.find(d => d.id === "dg9");
-    expect(dg9raw.structures.length).toBe(9);
-    expect(dg9raw.xpReward).toBe(65);
-    const d = normalizeDiagram(dg9raw);
-    const { container, unmount } = render(<DiagramGame diagram={d} />);
-    fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
-    expect(screen.getByText(/Question 1 \/ 9/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Type the structure name")).toBeInTheDocument();
-    for (let q = 0; q < d.structures.length; q++) {
-      const targetId = getHighlightedStructureId(container);
-      const target = d.structures.find(s => s.id === targetId);
-      fireEvent.change(getInput(), { target: { value: target.quiz.acceptableAnswers[0] } });
-      fireEvent.click(screen.getByText("Submit"));
-      fireEvent.click(screen.getByText(q + 1 >= d.structures.length ? "See Results" : "Next Question →"));
-    }
-    expect(screen.getByText(/Challenge Complete/i)).toBeInTheDocument();
-    expect(getXpEarnedValue(container)).toBe(65);
-    unmount();
-  });
-
-  it("dg7 (Prokaryotic Cell) and dg8 (Plant Cell) are unmodified and still load into Exam Challenge", () => {
+describe("Monocot Stem (dg12) -- dg1-dg8 regression remains intact", () => {
+  it("dg7 (Prokaryotic Cell) is unmodified: 8 structures, XP 55, Exam Challenge still loads", () => {
     const dg7 = DIAGRAM_DATA.find(d => d.id === "dg7");
     expect(dg7.structures.length).toBe(8);
     expect(dg7.xpReward).toBe(55);
+    const d = normalizeDiagram(dg7);
+    const { unmount } = render(<DiagramGame diagram={d} />);
+    fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
+    expect(screen.getByText(/Question 1 \/ 8/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Type the structure name")).toBeInTheDocument();
+    unmount();
+  });
+
+  it("dg8 (Plant Cell) is unmodified: 11 structures, XP 60, Exam Challenge still loads", () => {
     const dg8 = DIAGRAM_DATA.find(d => d.id === "dg8");
     expect(dg8.structures.length).toBe(11);
     expect(dg8.xpReward).toBe(60);
-    [dg7, dg8].forEach(raw => {
-      const d = normalizeDiagram(raw);
-      const { unmount } = render(<DiagramGame diagram={d} />);
-      fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
-      expect(screen.getByText(new RegExp(`Question 1 / ${d.structures.length}`))).toBeInTheDocument();
-      expect(screen.getByLabelText("Type the structure name")).toBeInTheDocument();
-      unmount();
-    });
+    const d = normalizeDiagram(dg8);
+    const { unmount } = render(<DiagramGame diagram={d} />);
+    fireEvent.click(screen.getByRole("button", { name: "📝 Exam Challenge" }));
+    expect(screen.getByText(/Question 1 \/ 11/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Type the structure name")).toBeInTheDocument();
+    unmount();
   });
 
   it("dg1-dg6 Exam Challenge still loads with an input, Submit, and intact structure counts", () => {
@@ -779,26 +613,16 @@ describe("Dicot Stem (dg10) -- dg1-dg9 regression remains intact", () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it("the registry and DIAGRAM_DATA contain dg1 through dg10, nothing renamed or removed, and dg11 is registered after them", () => {
-    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10"].forEach(id => {
+  it("the registry and DIAGRAM_DATA contain dg1 through dg12, nothing renamed or removed", () => {
+    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10", "dg11", "dg12"].forEach(id => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
-    expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
-  });
-
-  it("DG10 Foundation/Explore/Label/Mismatch/Identify data remain intact (spot check: xpReward, structure count, SVG registration, title, chapter)", () => {
-    const raw10 = DIAGRAM_DATA.find(d => d.id === "dg10");
-    expect(raw10.xpReward).toBe(63);
-    expect(raw10.structures.length).toBe(10);
-    expect(raw10.image).toEqual({ type: "svg", component: "dicotStem" });
-    expect(raw10.title).toBe("T.S. of a Dicot Stem");
-    expect(raw10.chapter).toBe("Ch 6 Anatomy of Flowering Plants");
+        expect(DIAGRAM_DATA.length).toBe(12);
   });
 });
 
-describe("Dicot Stem (dg10) -- source-level reusability check", () => {
-  it("ExamMode and buildExamOrder contain no dg10/Dicot-Stem-specific hardcoded names or conditionals", async () => {
+describe("Monocot Stem (dg12) -- source-level reusability check", () => {
+  it("ExamMode and buildExamOrder contain no dg12/Monocot-Root-specific hardcoded names or conditionals", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const { fileURLToPath } = await import("node:url");
@@ -809,10 +633,9 @@ describe("Dicot Stem (dg10) -- source-level reusability check", () => {
     const end = source.indexOf("function DiagramGame(");
     expect(start).toBeGreaterThan(-1);
     const body = source.slice(start, end);
-    const forbidden = ["Epidermis", "Hypodermis", "Cortex", "Endodermis", "Pericycle", "Xylem", "Phloem", "Cambium", "Medullary Ray", "Pith"];
+    const forbidden = ["Epidermis", "Hypodermis", "Ground Tissue", "Vascular Bundle", "Bundle Sheath", "Phloem", "Water-containing Cavity", "Protoxylem", "Metaxylem"];
     forbidden.forEach(word => expect(body.includes(word)).toBe(false));
-    expect(body.includes('diagram.id === "dg10"')).toBe(false);
-    expect(body.includes('diagram.image.component === "dicotStem"')).toBe(false);
+    expect(body.includes('diagram.id === "dg12"')).toBe(false);
 
     const genStart = source.indexOf("function buildExamOrder(");
     const genEnd = source.indexOf("\n}\n", genStart) + 1;

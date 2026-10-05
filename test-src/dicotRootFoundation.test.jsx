@@ -234,7 +234,7 @@ describe("Dicot Root (dg9) — regression: prior diagrams untouched", () => {
   });
 
   it("DIAGRAM_DATA now has exactly 10 diagrams (DG1–DG8 plus DG9, plus the new DG10)", () => {
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.length).toBe(12);
   });
 
   it("dg7's and dg8's own XP and structure counts are unchanged by adding dg9", () => {

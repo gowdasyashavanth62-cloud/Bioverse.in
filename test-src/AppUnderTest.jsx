@@ -713,6 +713,144 @@ const DIAGRAM_DATA = [
         quiz: { acceptableAnswers: ["pith"] } },
     ],
   },
+  {
+    id: "dg11",
+    title: "T.S. of a Monocot Root",
+    level: "1st PU",
+    chapter: "Ch 6 Anatomy of Flowering Plants",
+    category: "Plant Anatomy",
+    difficulty: "Medium",
+    description: "A transverse section of a typical monocotyledonous root, showing its tissues arranged in concentric zones -- from the outer epidermis with its root hairs, through the broad cortex, the endodermis and the pericycle, to a ring of many radial vascular bundles (polyarch xylem alternating with phloem) surrounding a large, well-developed central pith.",
+    image: { type: "svg", component: "monocotRoot" },
+    xpReward: 65,
+    importantPoints: [
+      "The outermost layer of the monocot root is the epidermis, with root hairs arising from epidermal cells.",
+      "The cortex consists of several layers of parenchymatous cells.",
+      "The innermost layer of the cortex is the endodermis.",
+      "The pericycle lies immediately inside the endodermis.",
+      "The vascular bundles of the monocot root are radial.",
+      "Monocot roots generally have more than six xylem bundles, making the xylem polyarch.",
+      "The xylem is exarch, with protoxylem toward the outside and metaxylem toward the centre.",
+      "The pith is large and well developed in the monocot root.",
+      "Monocotyledonous roots do not undergo secondary growth.",
+    ],
+    structures: [
+      { id: "rootHair", name: "Root hair",
+        shortDescription: "Fine outgrowth of an epidermal cell that absorbs water and minerals.",
+        explanation: "A thin, tubular outgrowth of an epidermal cell. Root hairs greatly increase the surface area of the root and absorb water and dissolved minerals from the soil.",
+        position: { xPct: 20, yPct: 20 }, labelPosition: { xPct: 3, yPct: 10 },
+        quiz: { acceptableAnswers: ["root hair", "root hairs"] } },
+      { id: "epidermis", name: "Epidermis",
+        shortDescription: "Single outermost layer of the root, giving rise to root hairs.",
+        explanation: "The outermost layer of the monocot root, one cell thick. Some of its cells grow out as unicellular root hairs, which take up water and minerals from the soil.",
+        position: { xPct: 65, yPct: 13 }, labelPosition: { xPct: 74, yPct: 2 },
+        quiz: { acceptableAnswers: ["epidermis", "epiblema"] } },
+      { id: "cortex", name: "Cortex",
+        shortDescription: "Broad zone of parenchymatous cells between the epidermis and endodermis.",
+        explanation: "A wide region of several layers of thin-walled parenchymatous cells with intercellular spaces. It stores food and carries water radially from the epidermis towards the endodermis.",
+        position: { xPct: 29, yPct: 71 }, labelPosition: { xPct: 3, yPct: 62 },
+        quiz: { acceptableAnswers: ["cortex"] } },
+      { id: "endodermis", name: "Endodermis",
+        shortDescription: "Innermost layer of the cortex, forming a distinct ring around the stele.",
+        explanation: "The single innermost layer of the cortex, forming a distinct ring around the vascular tissues. Its cells have band-like Casparian thickenings that control the movement of water into the vascular region.",
+        position: { xPct: 65, yPct: 65 }, labelPosition: { xPct: 97, yPct: 72 },
+        quiz: { acceptableAnswers: ["endodermis"] } },
+      { id: "pericycle", name: "Pericycle",
+        shortDescription: "Layer of cells lying immediately inside the endodermis.",
+        explanation: "A layer of thin-walled cells lying immediately inside the endodermis. It is the outermost layer of the vascular region (stele) and surrounds the vascular bundles.",
+        position: { xPct: 69, yPct: 53 }, labelPosition: { xPct: 97, yPct: 52 },
+        quiz: { acceptableAnswers: ["pericycle"] } },
+      { id: "phloem", name: "Phloem",
+        shortDescription: "Food-conducting patches alternating with the xylem groups.",
+        explanation: "Phloem occurs as separate patches that alternate with the xylem groups -- a radial arrangement. It conducts food manufactured in the leaves to the rest of the plant.",
+        position: { xPct: 59, yPct: 37 }, labelPosition: { xPct: 97, yPct: 28 },
+        quiz: { acceptableAnswers: ["phloem"] } },
+      { id: "protoxylem", name: "Protoxylem",
+        shortDescription: "First-formed, narrow xylem elements lying towards the outside.",
+        explanation: "The first-formed, narrow xylem vessels. In the exarch xylem of a root they lie towards the periphery of each xylem group, next to the pericycle.",
+        position: { xPct: 36, yPct: 40 }, labelPosition: { xPct: 3, yPct: 44 },
+        quiz: { acceptableAnswers: ["protoxylem", "proto xylem"] } },
+      { id: "metaxylem", name: "Metaxylem",
+        shortDescription: "Later-formed, wider xylem vessels lying towards the centre.",
+        explanation: "The later-formed, wider xylem vessels. In the exarch xylem of a root they lie towards the centre of the root, on the inner side of each xylem group.",
+        position: { xPct: 40, yPct: 58 }, labelPosition: { xPct: 3, yPct: 82 },
+        quiz: { acceptableAnswers: ["metaxylem", "meta xylem"] } },
+      { id: "pith", name: "Pith",
+        shortDescription: "Large, well-developed parenchymatous region at the centre of the root.",
+        explanation: "The large central region of parenchymatous cells surrounded by the ring of vascular bundles. Unlike the small or absent pith of a dicot root, the pith of a monocot root is large and well developed.",
+        position: { xPct: 50, yPct: 50 }, labelPosition: { xPct: 50, yPct: 99 },
+        quiz: { acceptableAnswers: ["pith"] } },
+    ],
+  },
+  {
+    id: "dg12",
+    title: "T.S. of a Monocot Stem",
+    level: "1st PU",
+    chapter: "Ch 6 Anatomy of Flowering Plants",
+    category: "Plant Anatomy",
+    difficulty: "Medium",
+    description: "A transverse section of a typical monocotyledonous stem, showing an outer epidermis, a sclerenchymatous hypodermis and a large undifferentiated ground tissue in which numerous conjoint, closed vascular bundles are scattered (smaller near the periphery, larger towards the centre). Each bundle has a sclerenchymatous sheath, phloem on its outer side, and xylem with a water-containing cavity on the inner side. These nine are teaching targets based on the textbook's description of monocot-stem anatomy.",
+    image: { type: "svg", component: "monocotStem" },
+    xpReward: 65,
+    importantPoints: [
+      "The epidermis forms the outermost layer of the monocot stem.",
+      "The hypodermis is made up of sclerenchymatous cells and provides mechanical strength.",
+      "The ground tissue is large and parenchymatous and is not differentiated into distinct cortex, endodermis, pericycle and pith regions.",
+      "Numerous vascular bundles are scattered throughout the ground tissue.",
+      "Peripheral vascular bundles are generally smaller than those located towards the centre.",
+      "Each vascular bundle is surrounded by a sclerenchymatous bundle sheath.",
+      "The vascular bundles are conjoint and closed because cambium is absent.",
+      "Phloem parenchyma is absent in the vascular bundles of the monocot stem.",
+      "Water-containing cavities occur within the vascular bundles.",
+    ],
+    structures: [
+      { id: "epidermis", name: "Epidermis",
+        shortDescription: "Single outermost layer of the stem.",
+        explanation: "The epidermis forms the outermost layer of the monocot stem. It is a single layer of cells that protects the tissues beneath it.",
+        position: { xPct: 74, yPct: 16 }, labelPosition: { xPct: 3, yPct: 10 },
+        quiz: { acceptableAnswers: ["epidermis"] } },
+      { id: "hypodermis", name: "Hypodermis",
+        shortDescription: "Sclerenchymatous layer just below the epidermis that gives mechanical strength.",
+        explanation: "The hypodermis lies immediately below the epidermis and is made up of sclerenchymatous cells (thick-walled, dead fibres). It gives the stem mechanical strength.",
+        position: { xPct: 19, yPct: 28 }, labelPosition: { xPct: 3, yPct: 30 },
+        quiz: { acceptableAnswers: ["hypodermis"] } },
+      { id: "groundTissue", name: "Ground Tissue",
+        shortDescription: "Large parenchymatous tissue filling the stem, not divided into cortex, endodermis, pericycle and pith.",
+        explanation: "The ground tissue is large and parenchymatous. Unlike the dicot stem, it is not differentiated into distinct cortex, endodermis, pericycle and pith regions; the vascular bundles lie scattered in it.",
+        position: { xPct: 21, yPct: 40 }, labelPosition: { xPct: 3, yPct: 72 },
+        quiz: { acceptableAnswers: ["ground tissue"] } },
+      { id: "vascularBundle", name: "Vascular Bundle",
+        shortDescription: "One of the many scattered conducting bundles embedded in the ground tissue.",
+        explanation: "Numerous vascular bundles are scattered throughout the ground tissue rather than forming a ring. Each is conjoint (xylem and phloem together) and closed because cambium is absent. Peripheral bundles are generally smaller than those towards the centre.",
+        position: { xPct: 60.8, yPct: 53.8 }, labelPosition: { xPct: 97, yPct: 14 },
+        quiz: { acceptableAnswers: ["vascular bundle", "vascular bundles"] } },
+      { id: "bundleSheath", name: "Bundle Sheath",
+        shortDescription: "Sclerenchymatous sheath surrounding each vascular bundle.",
+        explanation: "Each vascular bundle is surrounded by a sclerenchymatous bundle sheath, which protects the conducting tissues and adds strength.",
+        position: { xPct: 59.0, yPct: 50.3 }, labelPosition: { xPct: 97, yPct: 46 },
+        quiz: { acceptableAnswers: ["bundle sheath"] } },
+      { id: "phloem", name: "Phloem",
+        shortDescription: "Food-conducting tissue lying on the outer side of the bundle.",
+        explanation: "The phloem lies on the outer side of each vascular bundle and conducts food. In the monocot stem phloem parenchyma is absent, so the phloem consists of sieve tubes and companion cells.",
+        position: { xPct: 62.4, yPct: 54.4 }, labelPosition: { xPct: 97, yPct: 30 },
+        quiz: { acceptableAnswers: ["phloem"] } },
+      { id: "waterCavity", name: "Water-containing Cavity",
+        shortDescription: "Cavity inside the bundle formed where the first xylem elements break down.",
+        explanation: "A water-containing cavity occurs within each vascular bundle, on the inner side of the xylem, where the earliest xylem elements have broken down. It holds water for the bundle.",
+        position: { xPct: 58.5, yPct: 53.0 }, labelPosition: { xPct: 50, yPct: 99 },
+        quiz: { acceptableAnswers: ["water-containing cavity", "water containing cavity", "water cavity"] } },
+      { id: "protoxylem", name: "Protoxylem",
+        shortDescription: "First-formed, narrow xylem elements lying towards the centre of the stem.",
+        explanation: "The protoxylem is the first-formed, narrow part of the xylem. In the stem it lies towards the pith side (inner end) of the bundle, next to the water-containing cavity.",
+        position: { xPct: 59.2, yPct: 53.9 }, labelPosition: { xPct: 97, yPct: 78 },
+        quiz: { acceptableAnswers: ["protoxylem", "proto xylem"] } },
+      { id: "metaxylem", name: "Metaxylem",
+        shortDescription: "Later-formed, wide xylem vessels at the sides of the bundle.",
+        explanation: "The metaxylem consists of the later-formed, wider xylem vessels. Typically two large vessels lie to the sides of the bundle, with the protoxylem and water cavity between them on the inner side.",
+        position: { xPct: 60.1, yPct: 55.4 }, labelPosition: { xPct: 97, yPct: 62 },
+        quiz: { acceptableAnswers: ["metaxylem", "meta xylem"] } },
+    ],
+  },
 ];
 
 // Normalizes any DIAGRAM_DATA entry — the new game-ready shape (dg1) or the
@@ -18133,6 +18271,335 @@ function DicotStemSVG({
   );
 }
 
+// ── MonocotRootSVG (DG11) ─────────────────────────────────────────────
+// Deliberately different from DicotRootSVG (DG9): a monocot root has MANY
+// (polyarch, >6) exarch xylem groups arranged in a ring with phloem patches
+// alternating between them, and a LARGE central pith -- instead of DG9's
+// small star-shaped xylem with a tiny/absent pith. Root hairs are drawn
+// around the epidermis. Same prop/highlight contract as every other
+// diagram SVG, so the generic engine drives it with no DG11-specific logic.
+function MonocotRootSVG({
+  selectedId, onSelectStructure,
+  lockedIds, flashId, flashType, onDropStructure, dropEnabled,
+}) {
+  const [hoveredId, setHoveredId] = useState(null);
+  const locked = lockedIds || EMPTY_STRUCTURE_SET;
+  const isSelected = (id) => id === selectedId;
+  const isHovered = (id) => id === hoveredId;
+  const isLocked = (id) => locked.has(id);
+  const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
+
+  const structureProps = (id) => {
+    const flashCorrect = flashId === id && flashType === "correct";
+    const flashWrong = flashId === id && flashType === "wrong";
+    return {
+      onMouseEnter: () => setHoveredId(id),
+      onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
+      onClick: () => onSelectStructure && onSelectStructure(id),
+      onDragOver: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(id); } : undefined,
+      onDragLeave: dropEnabled ? () => setHoveredId((h) => (h === id ? null : h)) : undefined,
+      onDrop: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(null); onDropStructure && onDropStructure(id, e); } : undefined,
+      style: {
+        cursor: onSelectStructure ? "pointer" : "default",
+        transition: "opacity 0.15s, filter 0.15s",
+        opacity: isActive(id) ? 1 : 0.92,
+        filter: flashWrong
+          ? "drop-shadow(0 0 5px rgba(239,68,68,0.9))"
+          : flashCorrect
+          ? "drop-shadow(0 0 5px rgba(16,185,129,0.95))"
+          : isLocked(id)
+          ? "drop-shadow(0 0 3px rgba(16,185,129,0.55))"
+          : isSelected(id)
+          ? "drop-shadow(0 0 4.5px rgba(245,158,11,0.95))"
+          : isHovered(id)
+          ? "drop-shadow(0 0 2.5px rgba(245,158,11,0.5))"
+          : "none",
+      },
+    };
+  };
+
+  const cx = 50, cy = 50;
+  const rEpidermis = 40, rEndodermis = 21.5, rPericycle = 19.5, rPith = 9.5;
+  const toXY = (r, deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const f = (n) => n.toFixed(2);
+  const HAIR_ANGLES = Array.from({ length: 24 }, (_, i) => i * 15);
+  const POLE_ANGLES = Array.from({ length: 10 }, (_, i) => i * 36); // 10 xylem poles = polyarch
+  const PHLOEM_ANGLES = POLE_ANGLES.map((a) => a + 18); // alternate with the xylem poles
+  const CORTEX_RINGS = [[36.5, 32, 1.7], [32, 28, 1.7], [27.8, 24, 1.6], [24.2, 20, 1.3]];
+  const CASPARIAN_ANGLES = Array.from({ length: 36 }, (_, i) => i * 10);
+
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a monocot root diagram">
+      <defs>
+        <radialGradient id="mr-cortex" cx="45%" cy="40%" r="75%">
+          <stop offset="0%" stopColor="#F0FDF4" /><stop offset="100%" stopColor="#BBF7D0" />
+        </radialGradient>
+        <radialGradient id="mr-stele" cx="45%" cy="40%" r="75%">
+          <stop offset="0%" stopColor="#FEFCE8" /><stop offset="100%" stopColor="#FEF08A" />
+        </radialGradient>
+      </defs>
+
+      {/* Cortex -- broad zone of parenchyma cells between epidermis and endodermis */}
+      <g id="cortex" {...structureProps("cortex")}>
+        <circle cx={cx} cy={cy} r={rEpidermis - 0.8} fill="url(#mr-cortex)"
+          stroke={isActive("cortex") ? "#059669" : "none"} strokeWidth={isActive("cortex") ? 1.6 : 0} />
+        {CORTEX_RINGS.map(([r, n, cr], ri) =>
+          Array.from({ length: n }, (_, i) => {
+            const [x, y] = toXY(r, (360 / n) * i + (ri % 2 ? 360 / n / 2 : 0));
+            return <circle key={`${ri}-${i}`} cx={f(x)} cy={f(y)} r={cr} fill="#ECFDF5" stroke="#6EE7B7" strokeWidth="0.35" />;
+          })
+        )}
+      </g>
+
+      {/* Stele fill -- conjunctive background for the vascular ring + pith;
+          a plain backdrop, NOT one of the 9 quizzable structures */}
+      <circle cx={cx} cy={cy} r={rEndodermis} fill="url(#mr-stele)" />
+
+      {/* Endodermis -- distinct solid ring (innermost cortical layer) with
+          small Casparian-thickening dots; invisible wider ring = easy hit area */}
+      <g id="endodermis" {...structureProps("endodermis")}>
+        <circle cx={cx} cy={cy} r={rEndodermis} fill="none" stroke="transparent" strokeWidth="3.2" />
+        <circle cx={cx} cy={cy} r={rEndodermis} fill="none" stroke="#B91C1C"
+          strokeWidth={isActive("endodermis") ? 2.6 : 1.8} />
+        {CASPARIAN_ANGLES.map((deg) => {
+          const [x, y] = toXY(rEndodermis, deg);
+          return <circle key={deg} cx={f(x)} cy={f(y)} r="0.45" fill="#450A0A" />;
+        })}
+      </g>
+
+      {/* Pericycle -- continuous layer immediately inside the endodermis */}
+      <g id="pericycle" {...structureProps("pericycle")}>
+        <circle cx={cx} cy={cy} r={rPericycle} fill="none" stroke="transparent" strokeWidth="2.2" />
+        <circle cx={cx} cy={cy} r={rPericycle} fill="none" stroke="#92400E"
+          strokeWidth={isActive("pericycle") ? 2.2 : 1.4} />
+      </g>
+
+      {/* Phloem -- separate patches ALTERNATING with the xylem groups */}
+      <g id="phloem" {...structureProps("phloem")}>
+        {PHLOEM_ANGLES.map((deg) => {
+          const [x, y] = toXY(16, deg);
+          return <circle key={deg} cx={f(x)} cy={f(y)} r={isActive("phloem") ? 2.7 : 2.3}
+            fill="#F9A8D4" stroke="#BE185D" strokeWidth="0.7" />;
+        })}
+      </g>
+
+      {/* Protoxylem -- small, first-formed vessels at the OUTER end of each
+          xylem pole (exarch), next to the pericycle */}
+      <g id="protoxylem" {...structureProps("protoxylem")}>
+        {POLE_ANGLES.map((deg) => {
+          const [x, y] = toXY(17.2, deg);
+          return <circle key={deg} cx={f(x)} cy={f(y)} r={isActive("protoxylem") ? 1.5 : 1.1}
+            fill="#7F1D1D" stroke="#450A0A" strokeWidth="0.4" />;
+        })}
+      </g>
+
+      {/* Metaxylem -- larger, later-formed vessels toward the CENTRE of each pole */}
+      <g id="metaxylem" {...structureProps("metaxylem")}>
+        {POLE_ANGLES.map((deg) => {
+          const [x, y] = toXY(12.8, deg);
+          return <circle key={deg} cx={f(x)} cy={f(y)} r={isActive("metaxylem") ? 2.7 : 2.3}
+            fill="#FCA5A5" stroke="#991B1B" strokeWidth="0.7" />;
+        })}
+      </g>
+
+      {/* Pith -- LARGE, well-developed central parenchyma (contrast: DG9's tiny pith) */}
+      <g id="pith" {...structureProps("pith")}>
+        <circle cx={cx} cy={cy} r={rPith} fill="#FEF3C7"
+          stroke={isActive("pith") ? "#B45309" : "#D97706"} strokeWidth={isActive("pith") ? 1.4 : 0.8} />
+        {[[0, 0, 2.6], [4.6, 0, 1.9], [-4.6, 0, 1.9], [0, 4.6, 1.9], [0, -4.6, 1.9], [3.2, 3.2, 1.5], [-3.2, -3.2, 1.5], [3.2, -3.2, 1.5], [-3.2, 3.2, 1.5]].map(([dx, dy, cr], i) => (
+          <circle key={i} cx={cx + dx} cy={cy + dy} r={cr} fill="#FFFBEB" stroke="#FCD34D" strokeWidth="0.35" />
+        ))}
+      </g>
+
+      {/* Epidermis -- single outermost ring */}
+      <g id="epidermis" {...structureProps("epidermis")}>
+        <circle cx={cx} cy={cy} r={rEpidermis} fill="none" stroke="transparent" strokeWidth="3.4" />
+        <circle cx={cx} cy={cy} r={rEpidermis} fill="none" stroke="#78350F"
+          strokeWidth={isActive("epidermis") ? 3.4 : 2.4} />
+      </g>
+
+      {/* Root hairs -- fine outgrowths of epidermal cells, all the way round */}
+      <g id="rootHair" {...structureProps("rootHair")}>
+        {HAIR_ANGLES.map((deg, i) => {
+          const [x1, y1] = toXY(rEpidermis + 1, deg);
+          const [x2, y2] = toXY(rEpidermis + (i % 2 ? 5 : 6.5), deg);
+          return (
+            <g key={deg}>
+              <line x1={f(x1)} y1={f(y1)} x2={f(x2)} y2={f(y2)} stroke="transparent" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1={f(x1)} y1={f(y1)} x2={f(x2)} y2={f(y2)} stroke="#A16207"
+                strokeWidth={isActive("rootHair") ? 1.4 : 0.9} strokeLinecap="round" />
+            </g>
+          );
+        })}
+      </g>
+    </svg>
+  );
+}
+
+// ── MonocotStemSVG (DG12) ─────────────────────────────────────────────
+// Deliberately different from DicotStemSVG (DG10): the dominant feature is
+// MANY vascular bundles SCATTERED through a large undifferentiated ground
+// tissue (no ring, no cortex/pith zones), smaller toward the periphery and
+// larger toward the centre. Every bundle is conjoint & closed (no cambium),
+// has a sclerenchymatous sheath, phloem on the OUTER side and xylem inside:
+// two large metaxylem vessels at the sides, small protoxylem and a
+// water-containing cavity on the inner side. Same prop/highlight contract as
+// every other diagram SVG, so the generic engine drives it unchanged.
+// [x, y, scale] per bundle (viewBox units); fixed so rendering is deterministic.
+const MONOCOT_STEM_BUNDLES = [[50.0,50.0,3.70],[60.7,53.8,3.47],[48.3,59.7,3.35],[38.6,47.2,3.48],[54.3,39.7,3.47],[69.3,49.5,2.64],[58.0,66.3,2.86],[46.4,69.7,2.70],[31.0,57.8,2.59],[30.9,42.0,2.75],[44.5,29.8,2.90],[61.5,34.5,2.63],[76.9,54.4,2.16],[65.0,71.2,2.16],[47.0,76.6,2.23],[31.5,69.6,2.22],[23.3,56.9,2.38],[28.6,32.9,2.21],[40.6,24.2,2.30],[57.5,24.7,2.21],[72.0,39.5,2.25],[83.7,48.4,1.74],[77.4,67.9,1.73],[66.0,79.7,1.67],[48.0,82.6,1.79],[34.9,79.1,1.72],[20.7,63.9,1.74],[17.2,50.3,1.75],[24.0,29.4,1.85],[32.5,20.9,1.72],[49.6,16.4,1.84],[64.9,20.8,1.81],[78.7,34.2,1.65]];
+
+function MonocotStemSVG({
+  selectedId, onSelectStructure,
+  lockedIds, flashId, flashType, onDropStructure, dropEnabled,
+}) {
+  const [hoveredId, setHoveredId] = useState(null);
+  const locked = lockedIds || EMPTY_STRUCTURE_SET;
+  const isSelected = (id) => id === selectedId;
+  const isHovered = (id) => id === hoveredId;
+  const isLocked = (id) => locked.has(id);
+  const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
+
+  const structureProps = (id) => {
+    const flashCorrect = flashId === id && flashType === "correct";
+    const flashWrong = flashId === id && flashType === "wrong";
+    return {
+      onMouseEnter: () => setHoveredId(id),
+      onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
+      onClick: () => onSelectStructure && onSelectStructure(id),
+      onDragOver: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(id); } : undefined,
+      onDragLeave: dropEnabled ? () => setHoveredId((h) => (h === id ? null : h)) : undefined,
+      onDrop: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(null); onDropStructure && onDropStructure(id, e); } : undefined,
+      style: {
+        cursor: onSelectStructure ? "pointer" : "default",
+        transition: "opacity 0.15s, filter 0.15s",
+        opacity: isActive(id) ? 1 : 0.92,
+        filter: flashWrong
+          ? "drop-shadow(0 0 5px rgba(239,68,68,0.9))"
+          : flashCorrect
+          ? "drop-shadow(0 0 5px rgba(16,185,129,0.95))"
+          : isLocked(id)
+          ? "drop-shadow(0 0 3px rgba(16,185,129,0.55))"
+          : isSelected(id)
+          ? "drop-shadow(0 0 4.5px rgba(245,158,11,0.95))"
+          : isHovered(id)
+          ? "drop-shadow(0 0 2.5px rgba(245,158,11,0.5))"
+          : "none",
+      },
+    };
+  };
+
+  const cx = 50, cy = 50, rEpidermis = 41.2, rHypodermis = 38.2, rGround = 36.8;
+  const f = (n) => n.toFixed(2);
+  // Local bundle frame: -y points OUT of the stem (phloem side), +y points to the centre.
+  const place = ([x, y, s]) => {
+    const phi = Math.atan2(y - cy, x - cx) * 180 / Math.PI + 90;
+    return `translate(${f(x)} ${f(y)}) rotate(${f(phi)}) scale(${f(s)})`;
+  };
+  // Parenchyma cells of the ground tissue: a hex-ish grid that skips the bundles.
+  const cells = [];
+  for (let gy = 16; gy <= 84; gy += 4.6) {
+    for (let gx = 16; gx <= 84; gx += 4.6) {
+      const x = gx + (Math.round((gy - 16) / 4.6) % 2 ? 2.3 : 0);
+      if (Math.hypot(x - cx, gy - cy) > rGround - 2) continue;
+      if (MONOCOT_STEM_BUNDLES.some(([bx, by, bs]) => Math.hypot(x - bx, gy - by) < bs * 1.2 + 1.3)) continue;
+      cells.push([x, gy]);
+    }
+  }
+  const HYPO_DOTS = Array.from({ length: 48 }, (_, i) => i * 7.5);
+
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a monocot stem diagram">
+      <defs>
+        <radialGradient id="ms-ground" cx="45%" cy="40%" r="75%">
+          <stop offset="0%" stopColor="#F7FEE7" /><stop offset="100%" stopColor="#D9F99D" />
+        </radialGradient>
+      </defs>
+
+      {/* Ground tissue -- large, parenchymatous, NOT differentiated into zones */}
+      <g id="groundTissue" {...structureProps("groundTissue")}>
+        <circle cx={cx} cy={cy} r={rGround} fill="url(#ms-ground)"
+          stroke={isActive("groundTissue") ? "#65A30D" : "none"} strokeWidth={isActive("groundTissue") ? 1.4 : 0} />
+        {cells.map(([x, y], i) => (
+          <circle key={i} cx={f(x)} cy={f(y)} r="1.5" fill="#F7FEE7" stroke="#A3E635" strokeWidth="0.3" />
+        ))}
+      </g>
+
+      {/* Vascular bundle bodies -- conjoint, closed; many, scattered */}
+      <g id="vascularBundle" {...structureProps("vascularBundle")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <circle key={i} transform={place(b)} r="1" fill="#FEF3C7"
+            stroke={isActive("vascularBundle") ? "#D97706" : "#F59E0B"} strokeWidth={isActive("vascularBundle") ? 0.16 : 0.07} />
+        ))}
+      </g>
+
+      {/* Bundle sheath -- sclerenchymatous ring round EACH bundle */}
+      <g id="bundleSheath" {...structureProps("bundleSheath")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <g key={i} transform={place(b)}>
+            <circle r="1.12" fill="none" stroke="transparent" strokeWidth="0.55" />
+            <circle r="1.12" fill="none" stroke="#92400E" strokeWidth={isActive("bundleSheath") ? 0.34 : 0.24} />
+          </g>
+        ))}
+      </g>
+
+      {/* Phloem -- on the OUTER side of each bundle */}
+      <g id="phloem" {...structureProps("phloem")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <ellipse key={i} transform={place(b)} cx="0" cy="-0.52" rx={isActive("phloem") ? 0.6 : 0.55} ry={isActive("phloem") ? 0.34 : 0.3}
+            fill="#F9A8D4" stroke="#BE185D" strokeWidth="0.07" />
+        ))}
+      </g>
+
+      {/* Water-containing cavity -- inner end of the bundle */}
+      <g id="waterCavity" {...structureProps("waterCavity")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <circle key={i} transform={place(b)} cx="0" cy="0.66" r={isActive("waterCavity") ? 0.24 : 0.2}
+            fill="#BAE6FD" stroke="#0284C7" strokeWidth="0.07" />
+        ))}
+      </g>
+
+      {/* Protoxylem -- small, first-formed vessels on the inner side (endarch) */}
+      <g id="protoxylem" {...structureProps("protoxylem")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <g key={i} transform={place(b)}>
+            <circle cx="-0.18" cy="0.38" r={isActive("protoxylem") ? 0.15 : 0.11} fill="#7F1D1D" stroke="#450A0A" strokeWidth="0.04" />
+            <circle cx="0.18" cy="0.38" r={isActive("protoxylem") ? 0.15 : 0.11} fill="#7F1D1D" stroke="#450A0A" strokeWidth="0.04" />
+          </g>
+        ))}
+      </g>
+
+      {/* Metaxylem -- two large, later-formed vessels at the sides */}
+      <g id="metaxylem" {...structureProps("metaxylem")}>
+        {MONOCOT_STEM_BUNDLES.map((b, i) => (
+          <g key={i} transform={place(b)}>
+            <circle cx="-0.5" cy="0.02" r={isActive("metaxylem") ? 0.34 : 0.3} fill="#FCA5A5" stroke="#991B1B" strokeWidth="0.07" />
+            <circle cx="0.5" cy="0.02" r={isActive("metaxylem") ? 0.34 : 0.3} fill="#FCA5A5" stroke="#991B1B" strokeWidth="0.07" />
+          </g>
+        ))}
+      </g>
+
+      {/* Hypodermis -- thick sclerenchymatous band below the epidermis */}
+      <g id="hypodermis" {...structureProps("hypodermis")}>
+        <circle cx={cx} cy={cy} r={rHypodermis} fill="none" stroke="transparent" strokeWidth="4.4" />
+        <circle cx={cx} cy={cy} r={rHypodermis} fill="none" stroke="#B45309" strokeWidth={isActive("hypodermis") ? 3.6 : 3} />
+        {HYPO_DOTS.map((deg) => {
+          const rad = (deg * Math.PI) / 180;
+          return <circle key={deg} cx={f(cx + rHypodermis * Math.cos(rad))} cy={f(cy + rHypodermis * Math.sin(rad))} r="0.5" fill="#FDE68A" />;
+        })}
+      </g>
+
+      {/* Epidermis -- single outermost layer */}
+      <g id="epidermis" {...structureProps("epidermis")}>
+        <circle cx={cx} cy={cy} r={rEpidermis} fill="none" stroke="transparent" strokeWidth="3.4" />
+        <circle cx={cx} cy={cy} r={rEpidermis} fill="none" stroke="#78350F" strokeWidth={isActive("epidermis") ? 2.8 : 1.9} />
+      </g>
+    </svg>
+  );
+}
+
 // String-keyed registry (same convention as PROCEDURAL_3D_MODELS in the
 // Virtual Lab) so DIAGRAM_DATA can reference an SVG component by name
 // without holding a live component reference in the data array itself.
@@ -18147,6 +18614,8 @@ const DIAGRAM_SVG_COMPONENTS = {
   plantCell: PlantCellSVG,
   dicotRoot: DicotRootSVG,
   dicotStem: DicotStemSVG,
+  monocotRoot: MonocotRootSVG,
+  monocotStem: MonocotStemSVG,
 };
 
 

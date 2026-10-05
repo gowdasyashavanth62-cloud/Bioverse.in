@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram, DIAGRAM_SVG_COMPONENTS } from "./AppUnderTest.jsx";
 
-const root = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg9"));
+const root = normalizeDiagram(DIAGRAM_DATA.find(d => d.id === "dg11"));
 const ROOT_IDS = root.structures.map(s => s.id);
 
 let consoleErrorSpy;
@@ -15,21 +15,21 @@ afterEach(() => {
   cleanup();
 });
 
-describe("Dicot Root (dg9) -- Explore Mode discovery", () => {
-  it("Diagram Center can locate and load T.S. of a Dicot Root, opening on Explore by default", () => {
+describe("Monocot Root (dg11) -- Explore Mode discovery", () => {
+  it("Diagram Center can locate and load T.S. of a Monocot Root, opening on Explore by default", () => {
     render(<DiagramCenter />);
-    fireEvent.click(screen.getByText("T.S. of a Dicot Root"));
+    fireEvent.click(screen.getByText("T.S. of a Monocot Root"));
     expect(screen.getByRole("button", { name: /Explore/ })).toBeInTheDocument();
     expect(screen.getByText(/Hover or tap a structure/i)).toBeInTheDocument();
   });
 
-  it("uses DicotRootSVG (not any other diagram's renderer) through the registry and has exactly 9 structures", () => {
+  it("uses MonocotRootSVG (not any other diagram's renderer) through the registry and has exactly 9 structures", () => {
     expect(root.structures.length).toBe(9);
-    expect(root.image).toEqual({ type: "svg", component: "dicotRoot" });
-    expect(DIAGRAM_SVG_COMPONENTS.dicotRoot).toBeTruthy();
+    expect(root.image).toEqual({ type: "svg", component: "monocotRoot" });
+    expect(DIAGRAM_SVG_COMPONENTS.monocotRoot).toBeTruthy();
     const { container } = render(<DiagramGame diagram={root} />);
     const svg = container.querySelector("svg");
-    expect(svg.getAttribute("aria-label")).toMatch(/dicot root/i);
+    expect(svg.getAttribute("aria-label")).toMatch(/monocot root/i);
   });
 
   it("all 9 structures render as selectable SVG groups with the exact expected ids, no duplicates, no missing renderer", () => {
@@ -43,7 +43,7 @@ describe("Dicot Root (dg9) -- Explore Mode discovery", () => {
   });
 });
 
-describe("Dicot Root (dg9) -- Explore Mode behavior (all 9 structures individually reachable)", () => {
+describe("Monocot Root (dg11) -- Explore Mode behavior (all 9 structures individually reachable)", () => {
   it("every one of the 9 structures can be tapped/clicked, highlights correctly, and shows its own name/description/explanation", () => {
     ROOT_IDS.forEach(id => {
       const { container, unmount } = render(<DiagramGame diagram={root} />);
@@ -65,9 +65,9 @@ describe("Dicot Root (dg9) -- Explore Mode behavior (all 9 structures individual
     });
   });
 
-  it("cross-structure selection never shows the wrong structure's info (epidermis, xylem, phloem, pith, lateralRoot spot-checked)", () => {
+  it("cross-structure selection never shows the wrong structure's info (epidermis, metaxylem, phloem, pith, rootHair spot-checked)", () => {
     const { container } = render(<DiagramGame diagram={root} />);
-    const checks = ["epidermis", "xylem", "phloem", "pith", "lateralRoot"];
+    const checks = ["epidermis", "metaxylem", "phloem", "pith", "rootHair"];
     checks.forEach(id => {
       const target = root.structures.find(s => s.id === id);
       const others = checks.filter(o => o !== id).map(o => root.structures.find(s => s.id === o));
@@ -86,12 +86,12 @@ describe("Dicot Root (dg9) -- Explore Mode behavior (all 9 structures individual
   it("selecting a second structure fully replaces the panel content -- no stale info from the previous selection", () => {
     const { container } = render(<DiagramGame diagram={root} />);
     const first = root.structures.find(s => s.id === "cortex");
-    const second = root.structures.find(s => s.id === "cambium");
+    const second = root.structures.find(s => s.id === "protoxylem");
 
     fireEvent.click(container.querySelector("#cortex"));
     expect(screen.getByText(first.name)).toBeInTheDocument();
 
-    fireEvent.click(container.querySelector("#cambium"));
+    fireEvent.click(container.querySelector("#protoxylem"));
     expect(screen.getByText(second.name)).toBeInTheDocument();
     expect(screen.queryByText(first.shortDescription)).not.toBeInTheDocument();
     expect(screen.queryByText(first.explanation)).not.toBeInTheDocument();
@@ -118,18 +118,18 @@ describe("Dicot Root (dg9) -- Explore Mode behavior (all 9 structures individual
 
   it("tap (click event, no hover requirement) selects a structure just like desktop click", () => {
     const { container } = render(<DiagramGame diagram={root} />);
-    const target = root.structures.find(s => s.id === "lateralRoot");
+    const target = root.structures.find(s => s.id === "rootHair");
     // jsdom/RTL have no real touch simulation; onClick fires for both mouse
     // clicks and tap gestures in this codebase (no separate touch handler
     // exists), matching the convention already used by dg7/dg8's Explore tests.
-    fireEvent.click(container.querySelector("#lateralRoot"));
+    fireEvent.click(container.querySelector("#rootHair"));
     expect(screen.getByText(target.name)).toBeInTheDocument();
     expect(screen.getByText(target.explanation)).toBeInTheDocument();
   });
 });
 
-describe("Dicot Root (dg9) -- Important Points remain accessible from Explore", () => {
-  it("switching to Important Points shows exactly dg9's own points, none from another diagram", () => {
+describe("Monocot Root (dg11) -- Important Points remain accessible from Explore", () => {
+  it("switching to Important Points shows exactly dg11's own points, none from another diagram", () => {
     render(<DiagramGame diagram={root} />);
     fireEvent.click(screen.getByRole("button", { name: /Important Points/ }));
     expect(screen.getByRole("heading", { name: "⭐ Important Points" })).toBeInTheDocument();
@@ -144,23 +144,23 @@ describe("Dicot Root (dg9) -- Important Points remain accessible from Explore", 
     });
   });
 
-  it("switching modes away from and back to Explore preserves the prior selection via the generic (not dg9-specific) DiagramGame behavior", () => {
+  it("switching modes away from and back to Explore preserves the prior selection via the generic (not dg11-specific) DiagramGame behavior", () => {
     render(<DiagramGame diagram={root} />);
     const svgBefore = document.querySelector("svg");
-    fireEvent.click(svgBefore.querySelector("#xylem"));
-    expect(screen.getByText("Xylem")).toBeInTheDocument();
+    fireEvent.click(svgBefore.querySelector("#metaxylem"));
+    expect(screen.getByText("Metaxylem")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Important Points/ }));
-    expect(screen.queryByText(root.structures.find(s => s.id === "xylem").explanation)).not.toBeInTheDocument();
+    expect(screen.queryByText(root.structures.find(s => s.id === "metaxylem").explanation)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Explore/ }));
-    expect(screen.getByText("Xylem")).toBeInTheDocument();
+    expect(screen.getByText("Metaxylem")).toBeInTheDocument();
   });
 });
 
-describe("Dicot Root (dg9) -- XP safety in Explore Mode", () => {
-  it("exploring never shows a completion XP line, and dg9.xpReward (65) is untouched by Explore interaction", () => {
-    const raw9 = DIAGRAM_DATA.find(d => d.id === "dg9");
+describe("Monocot Root (dg11) -- XP safety in Explore Mode", () => {
+  it("exploring never shows a completion XP line, and dg11.xpReward (65) is untouched by Explore interaction", () => {
+    const raw9 = DIAGRAM_DATA.find(d => d.id === "dg11");
     expect(raw9.xpReward).toBe(65);
     const { container } = render(<DiagramGame diagram={root} />);
     ROOT_IDS.forEach(id => fireEvent.click(container.querySelector(`#${id}`)));
@@ -175,7 +175,7 @@ describe("Dicot Root (dg9) -- XP safety in Explore Mode", () => {
   });
 });
 
-describe("Dicot Root (dg9) -- Explore accessibility", () => {
+describe("Monocot Root (dg11) -- Explore accessibility", () => {
   it("every structure group is an interactive, accessible click target with an id matching its structure id", () => {
     const { container } = render(<DiagramGame diagram={root} />);
     ROOT_IDS.forEach(id => {
@@ -205,7 +205,7 @@ describe("Dicot Root (dg9) -- Explore accessibility", () => {
   });
 });
 
-describe("Dicot Root (dg9) -- responsive layout", () => {
+describe("Monocot Root (dg11) -- responsive layout", () => {
   const setWidth = (w) => {
     window.innerWidth = w;
     window.dispatchEvent(new Event("resize"));
@@ -255,7 +255,7 @@ describe("Dicot Root (dg9) -- responsive layout", () => {
   });
 });
 
-describe("Dicot Root (dg9) -- isolation", () => {
+describe("Monocot Root (dg11) -- isolation", () => {
   it("Explore selection state does not leak into a freshly mounted instance of a different diagram", () => {
     const { container: c1, unmount: unmount1 } = render(<DiagramGame diagram={root} />);
     fireEvent.click(c1.querySelector("#endodermis"));
@@ -270,7 +270,7 @@ describe("Dicot Root (dg9) -- isolation", () => {
   });
 });
 
-describe("Dicot Root (dg9) -- dg1-dg8 regression (Explore Mode still loads for every prior diagram)", () => {
+describe("Monocot Root (dg11) -- dg1-dg8 regression (Explore Mode still loads for every prior diagram)", () => {
   it("dg1-dg8 all still load into Explore Mode with an intact SVG and their own structure counts", () => {
     ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8"].forEach(id => {
       const d = normalizeDiagram(DIAGRAM_DATA.find(x => x.id === id));
@@ -283,8 +283,8 @@ describe("Dicot Root (dg9) -- dg1-dg8 regression (Explore Mode still loads for e
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it("the registry and DIAGRAM_DATA contain dg1 through dg10, nothing renamed or removed", () => {
-    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10"].forEach(id => {
+  it("the registry and DIAGRAM_DATA contain dg1 through dg11, nothing renamed or removed", () => {
+    ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10", "dg11"].forEach(id => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
     expect(DIAGRAM_DATA.length).toBe(12);

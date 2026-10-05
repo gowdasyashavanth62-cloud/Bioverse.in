@@ -253,7 +253,7 @@ describe("Notes PDF flow — regression / scope guard", () => {
   });
 
   it("Diagram Center and dg1-dg10 data are unaffected by this change", () => {
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.length).toBe(12);
     expect(DIAGRAM_DATA.find(d => d.id === "dg8").title).toBe("Plant Cell");
   });
 });

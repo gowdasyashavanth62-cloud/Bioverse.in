@@ -347,11 +347,11 @@ describe("Dicot Stem (dg10) -- dg1-dg9 regression (Explore Mode still loads for 
     expect(screen.getByText(target.explanation)).toBeInTheDocument();
   });
 
-  it("the registry and DIAGRAM_DATA contain dg1 through dg10, nothing renamed or removed, and no dg11 exists yet", () => {
+  it("the registry and DIAGRAM_DATA contain dg1 through dg10, nothing renamed or removed, and dg11 is registered after them", () => {
     ["dg1", "dg2", "dg3", "dg4", "dg5", "dg6", "dg7", "dg8", "dg9", "dg10"].forEach(id => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
-    expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeFalsy();
-    expect(DIAGRAM_DATA.length).toBe(10);
+    expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
+    expect(DIAGRAM_DATA.length).toBe(12);
   });
 });

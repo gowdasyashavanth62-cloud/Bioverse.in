@@ -12,8 +12,8 @@ afterEach(() => {
 describe("Diagram Center thumbnails (DG1-DG9)", () => {
   it("every diagram declares an svg-type image backed by a real, distinct component", () => {
     const svgDiagrams = DIAGRAM_DATA.filter(d => d.image?.type === "svg");
-    // All ten curriculum diagrams use real SVG artwork, not emoji/placeholder images.
-    expect(svgDiagrams.length).toBe(10);
+    // All twelve curriculum diagrams use real SVG artwork, not emoji/placeholder images.
+    expect(svgDiagrams.length).toBe(12);
     const componentRefs = svgDiagrams.map(d => DIAGRAM_SVG_COMPONENTS[d.image.component]);
     // Every referenced component must actually exist in the registry.
     componentRefs.forEach(c => expect(typeof c).toBe("function"));
