@@ -81,5 +81,11 @@ export default defineConfig({
           }),
         ]),
   ],
+  build: {
+    // The app is intentionally one large main chunk (~2.1 MB: React + Three.js
+    // Virtual Lab + all diagram data) plus a ~1.1 MB pdf.js worker. These are
+    // expected, so the default 500 kB warning is raised just above them.
+    chunkSizeWarningLimit: 2500,
+  },
   server: { port: 5173 },
 });
