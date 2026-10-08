@@ -25219,20 +25219,6 @@ function RoleSelect({ onRole }) {
       features: ["📚 1st & 2nd PU Syllabus","🤖 AI Biology Tutor","📊 KCET / NEET Analytics","🏆 Leaderboard & XP"],
     },
     {
-      key:      "teacher",
-      icon:     "👨‍🏫",
-      title:    "Teacher Portal",
-      subtitle: "Continue as Teacher",
-      desc:     "Manage content, upload videos and notes, create question papers, and track student progress.",
-      grad:     `linear-gradient(135deg,${T.purple},#6D28D9)`,
-      border:   T.purple,
-      glow:     "rgba(124,58,237,0.22)",
-      accent:   T.purple,
-      chip_bg:  "#EDE9FE",
-      chip_c:   T.purple,
-      features: ["📝 Content Management","👥 Student Tracking","❓ Question Bank","📈 Class Analytics"],
-    },
-    {
       key:      "admin",
       icon:     "👑",
       title:    "Super Admin Portal",
@@ -25408,102 +25394,6 @@ function RoleSelect({ onRole }) {
     </div>
   );
 }
-
-// ─── TEACHER AUTH — uses purple accent, same S.authWrap / S.authCard pattern ──
-
-function TeacherAuth({ onSuccess, onBack }) {
-  const [form, setForm]       = useState({ email:"", password:"" });
-  const [error, setError]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const h = k => e => setForm(f=>({...f,[k]:e.target.value}));
-
-  const submit = async () => {
-    setError(""); setLoading(true);
-    if (!form.email || !form.password) { setError("Please fill all fields."); setLoading(false); return; }
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(()=>ctrl.abort(), 10000);
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", "apikey":SUPABASE_ANON },
-        body: JSON.stringify({ email:form.email, password:form.password }),
-        signal: ctrl.signal,
-      });
-      clearTimeout(tid);
-      const d = await res.json();
-      if (d.access_token) {
-        sb._session = d;
-        try { localStorage.setItem("bv_session", JSON.stringify(d)); } catch {}
-        const profile = await sb.getProfile().catch(()=>null);
-        if (!profile || profile.role !== "teacher") {
-          setError("This account doesn't have teacher access.");
-          sb.signOut();
-          setLoading(false); return;
-        }
-        onSuccess(profile);
-        return;
-      }
-      setError(d.error_description || d.msg || "Invalid email or password.");
-    } catch {
-      setError("Could not reach the server. Check your connection and try again.");
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ ...S.authWrap, background:`linear-gradient(135deg,${T.g800},#4C1D95,${T.g900})` }}>
-      {/* Same background circles as student auth */}
-      <div style={{ position:"absolute", inset:0, overflow:"hidden" }}>
-        {[...Array(4)].map((_,i)=>(
-          <div key={i} style={{ position:"absolute", borderRadius:"50%",
-            border:`1px solid rgba(167,139,250,${0.06+i*0.04})`,
-            width:`${200+i*100}px`, height:`${200+i*100}px`,
-            top:"50%", left:"50%", transform:"translate(-50%,-50%)" }}/>
-        ))}
-      </div>
-
-      <div style={S.authCard}>
-        {/* Back link */}
-        <button onClick={onBack}
-          style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:"12.5px", color:T.purple, fontWeight:"600", marginBottom:"20px", padding:0, fontFamily:"inherit" }}>
-          ← Back to Portal Selection
-        </button>
-
-        <div style={{ textAlign:"center", marginBottom:"26px" }}>
-          <div style={{ width:"54px", height:"54px", borderRadius:"14px",
-            background:`linear-gradient(135deg,${T.purple},#6D28D9)`,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:"26px", margin:"0 auto 11px",
-            boxShadow:"0 8px 24px rgba(124,58,237,0.35)" }}>
-            👨‍🏫
-          </div>
-          <h1 style={{ fontSize:"22px", fontWeight:"800", color:T.text, margin:"0 0 4px" }}>Teacher Portal</h1>
-          <p style={{ fontSize:"13px", color:T.textFaint, margin:0 }}>Sign in with your teacher credentials</p>
-        </div>
-
-        {error && (
-          <div style={{ background:"#FEF2F2", border:"1px solid #FCA5A5", borderRadius:"9px", padding:"10px 13px", color:"#DC2626", fontSize:"13px", marginBottom:"13px", fontWeight:"500" }}>
-            {error}
-          </div>
-        )}
-
-        <label style={S.label}>Email Address</label>
-        <input style={{ ...S.input, borderColor: T.purple+"40" }} type="email" placeholder="teacher@bioverse.in"
-          value={form.email} onChange={h("email")} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-
-        <label style={S.label}>Password</label>
-        <input style={{ ...S.input, borderColor: T.purple+"40" }} type="password" placeholder="••••••••"
-          value={form.password} onChange={h("password")} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-
-        <button onClick={submit} disabled={loading}
-          style={{ ...S.btn, background:`linear-gradient(135deg,${T.purple},#6D28D9)`, color:"#fff", width:"100%", justifyContent:"center", padding:"13px", fontSize:"14.5px", opacity:loading?0.7:1, fontFamily:"inherit" }}>
-          {loading ? "Signing in…" : "Sign in to Teacher Portal"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── STUDENT AUTH WRAPPER — wraps existing Auth with back button ──────────────
 
 function StudentAuth({ onSuccess, onBack }) {
@@ -25800,7 +25690,7 @@ function CurrentShell({ user, page, chapter, syllabusLevel, isMobile, sidebarOpe
 
 export default function App() {
   const [mode, setMode] = useState("student");
-  // screen: "loading" | "role" | "studentAuth" | "teacherAuth" | "dashboard"
+  // screen: "loading" | "role" | "studentAuth" | "dashboard"
   const [screen, setScreen] = useState("loading");
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
@@ -25843,7 +25733,6 @@ export default function App() {
 
   const handleRoleSelect = (role) => {
     if (role === "admin") { setMode("admin"); return; }
-    if (role === "teacher") { setScreen("teacherAuth"); return; }
     setScreen("studentAuth");
   };
 
@@ -25893,7 +25782,6 @@ export default function App() {
 
   if (screen === "role")        return <RoleSelect onRole={handleRoleSelect} />;
   if (screen === "studentAuth") return <StudentAuth onSuccess={handleLoginSuccess} onBack={() => setScreen("role")} />;
-  if (screen === "teacherAuth") return <TeacherAuth onSuccess={handleLoginSuccess} onBack={() => setScreen("role")} />;
 
   if (uiMode === UI_MODES.CURRENT) {
     return (
@@ -25923,4 +25811,4 @@ export default function App() {
 // edits will be overwritten on the next "npm test". The real deliverable
 // at src/App.jsx / outputs/App.jsx is NOT modified — this block does not
 // exist there.
-export { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram, DIAGRAM_SVG_COMPONENTS, sb, ConnectedNotesTab, NotesView, PdfPageRenderer, ConnectedQuestionsTab, ConnectedTestsTab, QuestionsView, QuizPlayer, useAnswerReveal, ANSWER_LOCKED_MSG, SyllabusView, ChapterPage, AITutor, StudyPlanner, ProfileView, useIsNarrow, useUiMode, UI_MODES, UI_MODE_STORAGE_KEY, BioVisionShell, CurrentShell, ActivePage, BioVisionNav, BIOVISION_NAV_ITEMS, GlobalAppStyles, BioVisionHome, Dashboard, useDashboardData, callBioAI };
+export { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram, DIAGRAM_SVG_COMPONENTS, sb, ConnectedNotesTab, NotesView, PdfPageRenderer, ConnectedQuestionsTab, ConnectedTestsTab, QuestionsView, QuizPlayer, useAnswerReveal, ANSWER_LOCKED_MSG, SyllabusView, ChapterPage, AITutor, StudyPlanner, ProfileView, useIsNarrow, useUiMode, UI_MODES, UI_MODE_STORAGE_KEY, BioVisionShell, CurrentShell, ActivePage, BioVisionNav, BIOVISION_NAV_ITEMS, GlobalAppStyles, BioVisionHome, Dashboard, useDashboardData, callBioAI, RoleSelect };

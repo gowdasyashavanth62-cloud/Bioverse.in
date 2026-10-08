@@ -291,7 +291,7 @@ describe("BioVision UI -- Teacher / Upgrade / Premium removed", () => {
     const { fileURLToPath } = await import("node:url");
     const src = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "AppUnderTest.jsx"), "utf8");
     expect(src.includes("async getSubscription()")).toBe(true);
-    expect(src.includes("function TeacherAuth(")).toBe(true);
+    expect(src.includes("function StudentAuth(")).toBe(true); // student auth preserved (TeacherAuth was intentionally removed)
     const i = src.indexOf("function useDashboardData(");
     expect(src.slice(i, i + 2500).includes("isPremium")).toBe(true);
   });
