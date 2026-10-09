@@ -37,7 +37,7 @@ const TEST_ONLY_EXPORTS = [
   "SyllabusView", "ChapterPage", "AITutor", "StudyPlanner", "ProfileView", "useIsNarrow",
   "useUiMode", "UI_MODES", "UI_MODE_STORAGE_KEY",
   "BioVisionShell", "CurrentShell", "ActivePage", "BioVisionNav", "BIOVISION_NAV_ITEMS", "GlobalAppStyles",
-  "BioVisionHome", "Dashboard", "useDashboardData", "callBioAI", "RoleSelect",
+  "BioVisionHome", "Dashboard", "useDashboardData", "callBioAI", "TestsView", "RewardsStore", "RoleSelect", "resolveStructureTap", "useStructureTouchHandlers", "LabelMode", "ExploreMode", "MismatchMode", "DG_TAP_SLOP_PX", "DG_CLICK_SUPPRESS_MS",
 ];
 
 const TRAILER = `

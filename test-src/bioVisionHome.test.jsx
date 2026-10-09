@@ -171,7 +171,7 @@ describe("BioVisionHome -- Diagram Center / AI Tutor are entry points only", () 
 });
 
 describe("Current UI Dashboard -- unchanged", () => {
-  it("Dashboard still renders its original heading/greeting/premium-banner behavior, using the same shared data hook", async () => {
+  it("Dashboard still renders its original heading/greeting behavior, using the same shared data hook", async () => {
     mockFetch({ results: [{ id: "r1", score: 8, total: 10, tests: { title: "Cell Biology Test" } }] });
     render(<Dashboard user={REAL_USER} onNav={() => {}} />);
     await waitFor(() => expect(screen.getByText(/Welcome back, Priya/)).toBeInTheDocument());
@@ -269,30 +269,18 @@ describe("BioVision UI -- Teacher / Upgrade / Premium removed", () => {
     expect(screen.getByRole("button", { name: /BioVision-style UI/ })).toBeInTheDocument();
   });
 
-  it("ProfileView in Current mode is unchanged: still shows the plan badge and Go Premium / Upgrade Now block for a free user", async () => {
+  it("ProfileView in Current mode shows no plan badge, Go Premium or Upgrade Now (Premium removed) but keeps Interface Style", async () => {
     mockFetch({ profile: { id: "u1", full_name: "Priya Sharma", subscription_plan: "free", xp: 4820 }, sub: { plan_name: "free" } });
     const { container } = render(<ProfileView user={REAL_USER} uiMode="current" onUiModeChange={() => {}} />);
     await waitFor(() => expect(screen.getByText("Interface Style")).toBeInTheDocument());
-    expect(container.textContent).toMatch(/Go Premium/);
-    expect(container.textContent).toMatch(/Upgrade Now/);
-    expect(container.textContent).toMatch(/Free Plan/);
+    expect(container.textContent).not.toMatch(/premium|upgrade|free plan|razorpay/i);
   });
 
-  it("Current UI Dashboard still shows its Upgrade banner for a free user (Current UI preserved)", async () => {
+  it("Current UI Dashboard shows no Upgrade banner, plan label, or Upgrade button, and still shows the free content", async () => {
     mockFetch();
-    render(<Dashboard user={REAL_USER} onNav={() => {}} />);
-    await waitFor(() => expect(screen.getByText(/Upgrade to Premium/)).toBeInTheDocument());
-    expect(screen.getByText("Upgrade Now")).toBeInTheDocument();
-  });
-
-  it("backend preserved: useDashboardData still exposes isPremium and the subscription lookup still exists", async () => {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-    const { fileURLToPath } = await import("node:url");
-    const src = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "AppUnderTest.jsx"), "utf8");
-    expect(src.includes("async getSubscription()")).toBe(true);
-    expect(src.includes("function StudentAuth(")).toBe(true); // student auth preserved (TeacherAuth was intentionally removed)
-    const i = src.indexOf("function useDashboardData(");
-    expect(src.slice(i, i + 2500).includes("isPremium")).toBe(true);
+    const { container } = render(<Dashboard user={REAL_USER} onNav={() => {}} />);
+    await waitFor(() => expect(screen.getByText("Your Courses")).toBeInTheDocument());
+    expect(container.textContent).not.toMatch(/premium|upgrade|free plan|razorpay/i);
+    expect(screen.queryByText("Upgrade Now")).not.toBeInTheDocument();
   });
 });

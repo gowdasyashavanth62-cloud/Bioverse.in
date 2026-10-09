@@ -885,6 +885,120 @@ function normalizeDiagram(d) {
 // need to recreate/guard against an undefined `lockedIds` every render.
 const EMPTY_STRUCTURE_SET = new Set();
 
+// ─── DIAGRAM CENTER: shared touch / pointer interaction ───────────────────────
+// One shared implementation used by all 12 diagram SVG components (taps)
+// and by LabelMode (touch label drag). Mouse input keeps using the existing
+// per-structure onClick / native HTML5 drag-and-drop paths untouched; touch
+// and pen go through Pointer Events so a finger gets enlarged, nearest-first
+// hit testing instead of needing to land on a 1-2 unit wide stroke.
+const DG_TAP_SLOP_PX = 10;          // movement beyond this = a drag/scroll, not a tap
+const DG_HIT_RADIUS_PX = 22;        // 22px radius = 44px finger-sized target
+const DG_WEAK_OVERRIDE_PX = 12;     // a big backdrop structure yields to a small one this close
+const DG_CLICK_SUPPRESS_MS = 700;   // ignore the click the browser synthesizes after a handled touch
+const DG_WEAK_AREA_RATIO = 0.35;    // bbox covering >35% of the viewBox = backdrop/container structure
+const dgNow = () => (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
+
+// Structure group under a client-space point. The browser does the hit
+// test (document.elementsFromPoint), so viewBox scaling, CSS size, page
+// scroll and devicePixelRatio are all accounted for natively -- the point
+// is never treated as an SVG coordinate. If something other than the SVG
+// (e.g. the floating AI button) is on top, nothing is returned.
+function dgStructureAtPoint(svgEl, x, y) {
+  let stack = [];
+  if (typeof document.elementsFromPoint === "function") stack = document.elementsFromPoint(x, y) || [];
+  else if (typeof document.elementFromPoint === "function") stack = [document.elementFromPoint(x, y)];
+  if (!stack.length || !stack[0] || !svgEl.contains(stack[0])) return null;
+  for (const el of stack) {
+    if (!el || !svgEl.contains(el)) continue;
+    const g = el.closest ? el.closest("[data-structure-id]") : null;
+    if (g && svgEl.contains(g)) return g;
+  }
+  return null;
+}
+
+function dgIsBackdropStructure(svgEl, g) {
+  try {
+    const bb = g.getBBox();
+    const vb = svgEl.viewBox && svgEl.viewBox.baseVal;
+    if (!vb || !vb.width || !vb.height) return false;
+    return (bb.width * bb.height) / (vb.width * vb.height) > DG_WEAK_AREA_RATIO;
+  } catch { return false; }
+}
+
+// Resolve a finger/pen tap or drop point to a structure id. Exact hit wins;
+// otherwise probe rings of increasing radius (nearest structure wins, so two
+// neighbours never tie), up to a 44px-diameter target. A large backdrop
+// structure (e.g. the cell membrane) only yields to a small structure that
+// is very close, so tapping the backdrop itself still selects the backdrop.
+function resolveStructureTap(svgEl, x, y, opts = {}) {
+  if (!svgEl) return null;
+  const radius = opts.radius ?? DG_HIT_RADIUS_PX;
+  const weakRadius = opts.weakRadius ?? DG_WEAK_OVERRIDE_PX;
+  // Rings every 3px (<= the width of a thin stroke on a phone) with probes
+  // at most ~4px apart on each ring, so a thin line or a small dot can't
+  // slip between samples. Only runs on a touch/pen tap or drop.
+  const rings = [0];
+  for (let r = 3; r < radius; r += 3) rings.push(r);
+  if (radius > 0) rings.push(radius);
+  let backdrop = null;
+  for (let ri = 0; ri < rings.length; ri++) {
+    const r = rings[ri];
+    if (backdrop && r > weakRadius) break;
+    const dirs = Math.max(8, Math.ceil((2 * Math.PI * r) / 4));
+    const probes = ri === 0 ? [[0, 0]] : Array.from({ length: dirs }, (_, k) => {
+      const a = (k / dirs) * Math.PI * 2; return [Math.cos(a) * r, Math.sin(a) * r];
+    });
+    const hits = new Map(); // structure element -> probe count (insertion order = first seen)
+    for (const [dx, dy] of probes) {
+      const g = dgStructureAtPoint(svgEl, x + dx, y + dy);
+      if (g) hits.set(g, (hits.get(g) || 0) + 1);
+    }
+    let best = null, bestN = 0;
+    for (const [g, n] of hits) {
+      if (dgIsBackdropStructure(svgEl, g)) { if (!backdrop) backdrop = g; continue; }
+      if (n > bestN) { best = g; bestN = n; }
+    }
+    if (best) return best.getAttribute("data-structure-id");
+  }
+  return backdrop ? backdrop.getAttribute("data-structure-id") : null;
+}
+
+// Pointer-event tap handling for a diagram <svg> root. Mouse is ignored
+// here on purpose (existing onClick path = desktop behaviour unchanged).
+// A touch/pen tap = pointerdown + pointerup with < DG_TAP_SLOP_PX movement;
+// a scroll/pan or pointercancel never selects. After a handled tap the
+// browser's synthesized click is swallowed in the capture phase so the
+// structure's own onClick can't fire a second time.
+function useStructureTouchHandlers(onSelectStructure) {
+  const st = useRef({ pid: null, x: 0, y: 0, moved: false, handledAt: -Infinity });
+  return {
+    onPointerDown: (e) => {
+      if (e.pointerType === "mouse" || e.isPrimary === false) return;
+      st.current.pid = e.pointerId; st.current.x = e.clientX; st.current.y = e.clientY; st.current.moved = false;
+    },
+    onPointerMove: (e) => {
+      const s = st.current;
+      if (s.pid !== e.pointerId) return;
+      if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > DG_TAP_SLOP_PX) s.moved = true;
+    },
+    onPointerUp: (e) => {
+      const s = st.current;
+      if (e.pointerType === "mouse" || s.pid !== e.pointerId) return;
+      const wasTap = !s.moved;
+      s.pid = null;
+      if (!wasTap) return;
+      const id = resolveStructureTap(e.currentTarget, e.clientX, e.clientY);
+      if (id) { s.handledAt = dgNow(); onSelectStructure && onSelectStructure(id); }
+    },
+    onPointerCancel: (e) => { if (st.current.pid === e.pointerId) st.current.pid = null; },
+    onClickCapture: (e) => {
+      const s = st.current;
+      if (e.nativeEvent && e.nativeEvent.pointerType === "mouse") return; // a real mouse click is never swallowed
+      if (dgNow() - s.handledAt < DG_CLICK_SUPPRESS_MS) { s.handledAt = -Infinity; e.stopPropagation(); e.preventDefault(); }
+    },
+  };
+}
+
 // Fisher-Yates shuffle — generic utility for any diagram game mode that
 // needs a shuffled label/option bank (Label mode now, Find Mismatches
 // likely later).
@@ -1532,14 +1646,6 @@ const sb = {
     catch { return []; }
   },
 
-  async getSubscription() {
-    if (!this.userId) return null;
-    try {
-      const rows = await this._get("subscriptions", `student_id=eq.${this.userId}&status=eq.active&order=created_at.desc&limit=1&select=*`);
-      return Array.isArray(rows) ? rows[0] : null;
-    } catch { return null; }
-  },
-
   async getStudents() {
     try { return await this._get("users", `role=eq.student&order=created_at.desc&select=*`); }
     catch { return []; }
@@ -1604,39 +1710,6 @@ const sb = {
       return { totalStudents: 0, activeStudents: 0, premiumStudents: 0, totalVideos: 0, totalQuestions: 0, totalTests: 0, activeSubscriptions: 0 };
     }
   },
-};
-
-// ─── RAZORPAY HELPER ─────────────────────────────────────────────────────────
-const Razorpay = {
-  KEY_ID: "rzp_test_BioVerseKey",
-  openCheckout({ amount, name, description, email, onSuccess }) {
-    const options = {
-      key: this.KEY_ID, amount: amount * 100, currency: "INR",
-      name: "BioVerse", description,
-      prefill: { email },
-      theme: { color: "#0A5C36" },
-      handler: async (response) => {
-        try {
-          await sb._post("payments", {
-            student_id: sb.userId,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_order_id: response.razorpay_order_id || "",
-            amount, status: "success",
-            created_at: new Date().toISOString(),
-          });
-        } catch {}
-        onSuccess(response);
-      },
-    };
-    const load = () => { const rzp = new window.Razorpay(options); rzp.open(); };
-    if (window.Razorpay) { load(); }
-    else {
-      const s = document.createElement("script");
-      s.src = "https://checkout.razorpay.com/v1/checkout.js";
-      s.onload = load;
-      document.head.appendChild(s);
-    }
-  }
 };
 
 // ─── GLOBAL AUTH HOOK ─────────────────────────────────────────────────────────
@@ -1870,36 +1943,6 @@ function Landing({ onAuth }) {
                 <p style={S.sub}>{f.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section style={{ padding:"68px 32px", background:T.g25 }}>
-        <div style={{ maxWidth:"780px", margin:"0 auto", textAlign:"center" }}>
-          <h2 style={{ fontSize:"30px", fontWeight:"800", color:T.text, marginBottom:"40px" }}>Simple Pricing</h2>
-          <div style={S.grid2}>
-            <div style={{ ...S.card, textAlign:"left" }}>
-              <div style={{ fontSize:"12.5px", fontWeight:"700", color:T.textLight, textTransform:"uppercase", marginBottom:"9px" }}>Free</div>
-              <div style={{ fontSize:"34px", fontWeight:"900", color:T.text, marginBottom:"2px" }}>₹0<span style={{ fontSize:"15px", fontWeight:"500" }}>/forever</span></div>
-              {["Sample videos","Basic notes","10 Qs/chapter","Daily Challenge"].map((f,i)=>(
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"8px", marginTop:i===0?"16px":0 }}>
-                  <span style={{ color:T.g400 }}>✓</span><span style={{ fontSize:"13px", color:T.textMid }}>{f}</span>
-                </div>
-              ))}
-              <button onClick={()=>onAuth("signup")} style={{ ...S.btn, ...S.btnOutline, width:"100%", justifyContent:"center", marginTop:"18px" }}>Start Free</button>
-            </div>
-            <div style={{ background:`linear-gradient(135deg,${T.g600},${T.g700})`, borderRadius:"15px", padding:"22px", textAlign:"left", position:"relative", overflow:"hidden" }}>
-              <div style={{ position:"absolute", top:"13px", right:"13px", background:"#FCD34D", color:"#78350F", padding:"3px 10px", borderRadius:"99px", fontSize:"11px", fontWeight:"700" }}>👑 POPULAR</div>
-              <div style={{ fontSize:"12.5px", fontWeight:"700", color:"rgba(255,255,255,0.62)", textTransform:"uppercase", marginBottom:"9px" }}>Premium</div>
-              <div style={{ fontSize:"34px", fontWeight:"900", color:"#fff", marginBottom:"2px" }}>₹999<span style={{ fontSize:"15px", fontWeight:"500" }}>/year</span></div>
-              {["All HD Videos","Complete Notes","1000+ Questions","KCET & NEET Analytics","50+ Mock Tests","Progress Heatmaps","AI Tutor (soon)"].map((f,i)=>(
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"8px", marginTop:i===0?"16px":0 }}>
-                  <span style={{ color:"#34D399" }}>✓</span><span style={{ fontSize:"13px", color:"rgba(255,255,255,0.88)" }}>{f}</span>
-                </div>
-              ))}
-              <button onClick={()=>onAuth("signup")} style={{ ...S.btn, background:"#fff", color:T.g600, width:"100%", justifyContent:"center", marginTop:"18px" }}>Start Premium</button>
-            </div>
           </div>
         </div>
       </section>
@@ -2168,20 +2211,17 @@ function Sidebar({ active, onNav, user, isMobile, open, onClose }) {
 function useDashboardData(user) {
   const [results, setResults] = useState([]);
   const [units, setUnits] = useState([]);
-  const [sub, setSub] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [r, u, s] = await Promise.all([
+        const [r, u] = await Promise.all([
           sb.getResults(),
           sb.getUnits(),
-          sb.getSubscription(),
         ]);
         setResults(Array.isArray(r) ? r.slice(0,5) : []);
         setUnits(Array.isArray(u) ? u.slice(0,4) : []);
-        setSub(s);
       } catch(e) { console.error("Dashboard load error:", e); }
       setLoading(false);
     }
@@ -2189,7 +2229,6 @@ function useDashboardData(user) {
   }, []);
 
   const avgScore = results.length > 0 ? Math.round(results.reduce((s,r)=>s+Math.round((r.score/r.total)*100),0)/results.length) : 0;
-  const isPremium = sub?.plan_name === "premium_yearly" || sub?.plan_name === "premium_monthly" || user?.subscription_plan !== "free";
   const userXP = user?.xp || 0;
   const userLevel = getUserLevel(userXP);
   const nextLevel = getNextLevel(userXP);
@@ -2202,11 +2241,11 @@ function useDashboardData(user) {
     { label:"Total XP",     value:userXP.toLocaleString(),   icon:"⚡", grad:`linear-gradient(135deg,${T.g600},${T.g400})` },
   ];
 
-  return { results, units, sub, loading, avgScore, isPremium, userXP, userLevel, nextLevel, levelPct, statCards };
+  return { results, units, loading, avgScore, userXP, userLevel, nextLevel, levelPct, statCards };
 }
 
 function Dashboard({ user, onNav }) {
-  const { results, units, loading, avgScore, isPremium, userXP, userLevel, nextLevel, levelPct, statCards } = useDashboardData(user);
+  const { results, units, loading, avgScore, userXP, userLevel, nextLevel, levelPct, statCards } = useDashboardData(user);
 
   if (loading) return (
     <div style={{ ...S.page, textAlign:"center", paddingTop:"60px" }}>
@@ -2222,8 +2261,7 @@ function Dashboard({ user, onNav }) {
         <div>
           <h1 style={{ ...S.h1, marginBottom:"3px" }}>Welcome back, {user?.full_name?.split(" ")[0] || user?.name?.split(" ")[0] || "Student"} 👋</h1>
           <p style={S.sub}>
-            {isPremium ? <span style={{ color:T.amber, fontWeight:"600" }}>👑 Premium</span> : <span style={{ color:T.textFaint }}>Free Plan</span>}
-            {" · "}{userLevel.icon} {userLevel.title}
+            {userLevel.icon} {userLevel.title}
           </p>
         </div>
         <XPBadge xp={userXP}/>
@@ -2256,22 +2294,6 @@ function Dashboard({ user, onNav }) {
           </div>
         ))}
       </div>
-
-      {/* Upgrade banner for free users */}
-      {!isPremium && (
-        <div style={{ background:"linear-gradient(135deg,#7C3AED,#6D28D9)", borderRadius:"14px", padding:"16px 20px", marginBottom:"20px", display:"flex", alignItems:"center", gap:"14px" }}>
-          <span style={{ fontSize:"28px" }}>👑</span>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:"14px", fontWeight:"700", color:"#fff" }}>Upgrade to Premium — ₹999/year</div>
-            <div style={{ fontSize:"12px", color:"rgba(255,255,255,0.65)" }}>Unlock all videos, notes, mock tests, KCET/NEET analytics, and AI Tutor</div>
-          </div>
-          <button onClick={()=>{
-            Razorpay.openCheckout({ amount:999, name:"BioVerse", description:"Premium Yearly Plan", email:user?.email||"", onSuccess:()=>alert("Payment successful! Premium activated.") });
-          }} style={{ ...S.btn, background:"#fff", color:"#7C3AED", fontWeight:"700", fontSize:"13px", padding:"9px 18px", flexShrink:0 }}>
-            Upgrade Now
-          </button>
-        </div>
-      )}
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"18px" }}>
         {/* Courses */}
@@ -16867,10 +16889,12 @@ function AnimalCellSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -16907,7 +16931,7 @@ function AnimalCellSVG({
     "C59.32,8.35 70.07,16.1 76.9,23.1 C83.73,30.1 90.88,40.92 91,50 Z";
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Animal cell structure diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Animal cell structure diagram">
       <defs>
         <radialGradient id="ac-cytoplasm" cx="42%" cy="38%" r="75%">
           <stop offset="0%" stopColor="#FFFBF5" />
@@ -17033,10 +17057,12 @@ function HumanHeartSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17063,7 +17089,7 @@ function HumanHeartSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Human heart structure diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Human heart structure diagram">
       <defs>
         <linearGradient id="hh-ra" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FDA4AF" /><stop offset="100%" stopColor="#FB7185" />
@@ -17169,10 +17195,12 @@ function LeafCrossSectionSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17199,7 +17227,7 @@ function LeafCrossSectionSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Leaf cross section diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Leaf cross section diagram">
       <defs>
         <linearGradient id="lf-palisade" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#86EFAC" /><stop offset="100%" stopColor="#22C55E" />
@@ -17302,10 +17330,12 @@ function DNADoubleHelixSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17337,7 +17367,7 @@ function DNADoubleHelixSVG({
   const echoRungY = [10, 20, 30, 58, 82, 92];
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="DNA double helix diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="DNA double helix diagram">
       <defs>
         <linearGradient id="dna-backbone-l" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#CBD5E1" /><stop offset="100%" stopColor="#64748B" />
@@ -17427,10 +17457,12 @@ function FlowerStructureSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17457,7 +17489,7 @@ function FlowerStructureSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Flower structure diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Flower structure diagram">
       <defs>
         <radialGradient id="fl-petal" cx="35%" cy="30%" r="80%">
           <stop offset="0%" stopColor="#FCE7F3" /><stop offset="100%" stopColor="#F472B6" />
@@ -17549,10 +17581,12 @@ function EcosystemPyramidSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17579,7 +17613,7 @@ function EcosystemPyramidSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Ecosystem pyramid diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Ecosystem pyramid diagram">
       <defs>
         <linearGradient id="ep-producers" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#86EFAC" /><stop offset="100%" stopColor="#16A34A" />
@@ -17683,10 +17717,12 @@ function ProkaryoticCellSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17713,7 +17749,7 @@ function ProkaryoticCellSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Prokaryotic cell diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Prokaryotic cell diagram">
       <defs>
         <radialGradient id="pc-capsule" cx="50%" cy="50%" r="60%">
           <stop offset="60%" stopColor="#A5F3FC" stopOpacity="0" />
@@ -17799,10 +17835,12 @@ function PlantCellSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17829,7 +17867,7 @@ function PlantCellSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Plant cell diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Plant cell diagram">
       <defs>
         <linearGradient id="pl-cytoplasm" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#ECFDF5" /><stop offset="100%" stopColor="#D1FAE5" />
@@ -17944,10 +17982,12 @@ function DicotRootSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -17992,7 +18032,7 @@ function DicotRootSVG({
   const [lrx, lry] = toXY(50, 30); // lateral root outward tip, angle 30deg
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a dicot root diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Transverse section of a dicot root diagram">
       <defs>
         <radialGradient id="dr-cortex" cx="45%" cy="40%" r="75%">
           <stop offset="0%" stopColor="#ECFDF5" /><stop offset="100%" stopColor="#BBF7D0" />
@@ -18106,10 +18146,12 @@ function DicotStemSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -18166,7 +18208,7 @@ function DicotStemSVG({
   };
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a dicot stem diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Transverse section of a dicot stem diagram">
       <defs>
         <radialGradient id="ds-cortex" cx="45%" cy="40%" r="75%">
           <stop offset="0%" stopColor="#ECFDF5" /><stop offset="100%" stopColor="#BBF7D0" />
@@ -18289,10 +18331,12 @@ function MonocotRootSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -18332,7 +18376,7 @@ function MonocotRootSVG({
   const CASPARIAN_ANGLES = Array.from({ length: 36 }, (_, i) => i * 10);
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a monocot root diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Transverse section of a monocot root diagram">
       <defs>
         <radialGradient id="mr-cortex" cx="45%" cy="40%" r="75%">
           <stop offset="0%" stopColor="#F0FDF4" /><stop offset="100%" stopColor="#BBF7D0" />
@@ -18462,10 +18506,12 @@ function MonocotStemSVG({
   const isLocked = (id) => locked.has(id);
   const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
 
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
   const structureProps = (id) => {
     const flashCorrect = flashId === id && flashType === "correct";
     const flashWrong = flashId === id && flashType === "wrong";
     return {
+      "data-structure-id": id,
       onMouseEnter: () => setHoveredId(id),
       onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
       onClick: () => onSelectStructure && onSelectStructure(id),
@@ -18511,7 +18557,7 @@ function MonocotStemSVG({
   const HYPO_DOTS = Array.from({ length: 48 }, (_, i) => i * 7.5);
 
   return (
-    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }} role="img" aria-label="Transverse section of a monocot stem diagram">
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Transverse section of a monocot stem diagram">
       <defs>
         <radialGradient id="ms-ground" cx="45%" cy="40%" r="75%">
           <stop offset="0%" stopColor="#F7FEE7" /><stop offset="100%" stopColor="#D9F99D" />
@@ -18723,10 +18769,19 @@ function LabelMode({ diagram, isNarrow }) {
   const [feedback, setFeedback] = useState(null); // { type, text }
   const flashTimer = useRef(null);
   const feedbackTimer = useRef(null);
+  // Touch/pen label drag (Pointer Events). Mouse keeps native HTML5 DnD.
+  const svgWrapRef = useRef(null);
+  const chipPtr = useRef(null);            // { pid, labelId, x, y, dragging }
+  const lastChipPointerType = useRef("mouse");
+  const dragEndedAt = useRef(-Infinity);   // swallows the click that follows a drag
+  const [touchDrag, setTouchDrag] = useState(null); // { name, x, y } while a finger drag is active
+
+  function endChipPointer() { chipPtr.current = null; setTouchDrag(null); }
 
   function resetGame() {
     clearTimeout(flashTimer.current);
     clearTimeout(feedbackTimer.current);
+    endChipPointer();
     setPlaced(new Set());
     setBank(makeBank());
     setSelectedLabelId(null);
@@ -18790,7 +18845,7 @@ function LabelMode({ diagram, isNarrow }) {
       <div style={isNarrow ? { display:"flex", flexDirection:"column", gap:"14px" } : S.grid2}>
         <div style={{ ...S.card, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"260px", background:T.g25, position:"relative" }}>
           {SvgComponent ? (
-            <div style={{ width:"90%", maxWidth:"320px", aspectRatio:"1 / 1" }}>
+            <div ref={svgWrapRef} style={{ width:"90%", maxWidth:"320px", aspectRatio:"1 / 1" }}>
               <SvgComponent
                 selectedId={null}
                 onSelectStructure={(id) => attemptPlace(selectedLabelId, id)}
@@ -18830,9 +18885,40 @@ function LabelMode({ diagram, isNarrow }) {
                 {remaining.map(label => (
                   <div key={label.id}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setData("text/plain", label.id); e.dataTransfer.effectAllowed = "move"; }}
-                    onClick={() => setSelectedLabelId(prev => (prev === label.id ? null : label.id))}
+                    onPointerDown={(e) => {
+                      lastChipPointerType.current = e.pointerType || "mouse";
+                      if (e.pointerType === "mouse" || e.isPrimary === false) return;
+                      chipPtr.current = { pid: e.pointerId, labelId: label.id, name: label.name, x: e.clientX, y: e.clientY, dragging: false };
+                      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* not supported / already released */ }
+                    }}
+                    onPointerMove={(e) => {
+                      const p = chipPtr.current;
+                      if (!p || p.pid !== e.pointerId) return;
+                      if (!p.dragging && Math.hypot(e.clientX - p.x, e.clientY - p.y) > DG_TAP_SLOP_PX) p.dragging = true;
+                      if (p.dragging) setTouchDrag({ name: p.name, x: e.clientX, y: e.clientY });
+                    }}
+                    onPointerUp={(e) => {
+                      const p = chipPtr.current;
+                      if (!p || p.pid !== e.pointerId) return;
+                      const wasDrag = p.dragging;
+                      endChipPointer();
+                      if (!wasDrag) return; // plain tap: the click handler below selects the label
+                      dragEndedAt.current = dgNow();
+                      const svgEl = svgWrapRef.current && svgWrapRef.current.querySelector("svg");
+                      const sid = svgEl ? resolveStructureTap(svgEl, e.clientX, e.clientY) : null;
+                      if (sid) attemptPlace(p.labelId, sid);
+                    }}
+                    onPointerCancel={(e) => { if (chipPtr.current && chipPtr.current.pid === e.pointerId) endChipPointer(); }}
+                    onDragStart={(e) => {
+                      if (lastChipPointerType.current !== "mouse") { e.preventDefault(); return; } // touch drag is pointer-based
+                      e.dataTransfer.setData("text/plain", label.id); e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onClick={() => {
+                      if (dgNow() - dragEndedAt.current < DG_CLICK_SUPPRESS_MS) { dragEndedAt.current = -Infinity; return; }
+                      setSelectedLabelId(prev => (prev === label.id ? null : label.id));
+                    }}
                     style={{
+                      touchAction:"none", WebkitTouchCallout:"none",
                       padding:"7px 12px", borderRadius:"8px", fontSize:"12.5px", fontWeight:"600", cursor:"grab", userSelect:"none",
                       background: selectedLabelId === label.id ? T.g600 : "#fff",
                       color: selectedLabelId === label.id ? "#fff" : T.textMid,
@@ -18843,6 +18929,13 @@ function LabelMode({ diagram, isNarrow }) {
                   </div>
                 ))}
               </div>
+              {touchDrag && (
+                <div aria-hidden="true" style={{
+                  position:"fixed", left:touchDrag.x, top:touchDrag.y, transform:"translate(-50%,-140%)", zIndex:1000, pointerEvents:"none",
+                  padding:"7px 12px", borderRadius:"8px", fontSize:"12.5px", fontWeight:"600", background:T.g600, color:"#fff",
+                  boxShadow:"0 6px 18px rgba(0,0,0,0.25)", whiteSpace:"nowrap",
+                }}>{touchDrag.name}</div>
+              )}
             </>
           )}
         </div>
@@ -19792,7 +19885,6 @@ function TestsView() {
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "2px" }}>
                             <span style={{ fontSize: "14px", fontWeight: "600" }}>{t.title}</span>
-                            {t.is_premium && <span style={S.badge(T.amber, "#FEF3C7")}>👑 Premium</span>}
                             {done && <span style={S.badge(T.g400, T.g50)}>Score: {pct}%</span>}
                           </div>
                           <div style={{ display: "flex", gap: 13 }}>
@@ -19955,7 +20047,6 @@ function ProfileView({ user, uiMode, onUiModeChange }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: user?.full_name || user?.name || "", phone: user?.phone || "", class: user?.class || "1st PU" });
   const [results, setResults] = useState([]);
-  const [sub, setSub] = useState(null);
   const [toast, setToast] = useState("");
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const h = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -19963,10 +20054,9 @@ function ProfileView({ user, uiMode, onUiModeChange }) {
   useEffect(() => {
     async function load() {
       try {
-        const [p, r, s] = await Promise.all([sb.getProfile(), sb.getResults(), sb.getSubscription()]);
+        const [p, r] = await Promise.all([sb.getProfile(), sb.getResults()]);
         if (p) { setProfile(p); setForm({ full_name: p.full_name || "", phone: p.phone || "", class: p.class || "1st PU" }); }
         setResults(Array.isArray(r) ? r : []);
-        setSub(s);
       } catch (e) { console.error(e); }
     }
     load();
@@ -19985,7 +20075,6 @@ function ProfileView({ user, uiMode, onUiModeChange }) {
   const level = getUserLevel(xp);
   const nextLevel = getNextLevel(xp);
   const levelPct = nextLevel ? Math.round((xp - level.minXP) / (nextLevel.minXP - level.minXP) * 100) : 100;
-  const isPremium = sub?.plan_name !== "free" && sub !== null || profile?.subscription_plan !== "free";
   const avgScore = results.length > 0 ? Math.round(results.reduce((s, r) => s + Math.round((r.score / r.total) * 100), 0) / results.length) : 0;
 
   return (
@@ -20000,9 +20089,6 @@ function ProfileView({ user, uiMode, onUiModeChange }) {
             </div>
             <div style={{ fontSize: "16px", fontWeight: "700" }}>{profile?.full_name || "Student"}</div>
             <div style={{ fontSize: "12.5px", color: T.textLight, marginTop: "2px" }}>{profile?.class || "1st PU"}</div>
-            {(uiMode || UI_MODES.BIOVISION) !== UI_MODES.BIOVISION && <div style={{ marginTop: "9px" }}>
-              {isPremium ? <span style={S.badge(T.amber, "#FEF3C7")}>👑 Premium</span> : <span style={S.badge(T.textFaint, "#F3F4F6")}>🆓 Free Plan</span>}
-            </div>}
             <div style={{ marginTop: "11px" }}><XPBadge xp={xp} /></div>
             <div style={{ marginTop: "10px" }}><LevelBadge xp={xp} size="sm" /></div>
             {/* Level progress */}
@@ -20021,17 +20107,6 @@ function ProfileView({ user, uiMode, onUiModeChange }) {
                 </div>
               ))}
             </div>
-            {!isPremium && (uiMode || UI_MODES.BIOVISION) !== UI_MODES.BIOVISION && (
-              <div style={{ marginTop: "14px", background: `linear-gradient(135deg,${T.g600},${T.g700})`, borderRadius: "11px", padding: "13px" }}>
-                <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#fff", marginBottom: "3px" }}>👑 Go Premium</div>
-                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.62)", marginBottom: "9px" }}>Unlock all videos, notes, and AI analytics</div>
-                <div style={{ fontSize: "20px", fontWeight: "900", color: "#fff" }}>₹999<span style={{ fontSize: "12px", fontWeight: "400" }}>/year</span></div>
-                <button onClick={() => Razorpay.openCheckout({ amount: 999, name: "BioVerse", description: "Premium Yearly Plan", email: profile?.email || "", onSuccess: () => showToast("Payment successful! Premium activated.") })}
-                  style={{ ...S.btn, background: "#fff", color: T.g600, width: "100%", justifyContent: "center", marginTop: "9px", fontSize: "12.5px", padding: "8px" }}>
-                  Upgrade Now →
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Badges */}
@@ -24127,10 +24202,8 @@ const MEMORY_GAME_PAIRS = [
 ];
 
 const REWARDS_STORE = [
-  { id:"r1", title:"1 Month Premium",     cost:500,  icon:"👑", desc:"Unlock all premium features for 30 days",   category:"Premium" },
   { id:"r2", title:"Exclusive Notes PDF", cost:150,  icon:"📄", desc:"AI-generated last-minute revision sheet",    category:"Content" },
   { id:"r3", title:"Special Badge",       cost:100,  icon:"🏅", desc:"Exclusive 'XP Legend' badge for your profile",category:"Badge" },
-  { id:"r4", title:"3 Month Premium",     cost:1200, icon:"🌟", desc:"Unlock all premium features for 90 days",   category:"Premium" },
   { id:"r5", title:"AI Test Pack",        cost:200,  icon:"🤖", desc:"50 AI-generated personalized test questions", category:"Content" },
   { id:"r6", title:"Mock Test Bundle",    cost:300,  icon:"🧪", desc:"Access to 5 exclusive full mock tests",      category:"Tests" },
 ];
@@ -24280,7 +24353,7 @@ function WeeklyChallenges({ onNav }) {
       <div style={{ ...S.flexBetween, marginBottom:"22px" }}>
         <div>
           <h1 style={{ ...S.h1, marginBottom:"3px" }}>🎯 Weekly Challenges</h1>
-          <p style={S.sub}>Complete challenges to earn bonus XP, badges, and premium rewards</p>
+          <p style={S.sub}>Complete challenges to earn bonus XP, badges, and rewards</p>
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{ fontSize:"18px", fontWeight:"800", color:T.amber }}>⚡ 780 XP</div>
@@ -24329,7 +24402,7 @@ function WeeklyChallenges({ onNav }) {
           <div style={{ flex:1 }}>
             <div style={{ fontSize:"15px", fontWeight:"700", color:"#fff" }}>Rewards Store</div>
             <div style={{ fontSize:"12.5px", color:"rgba(255,255,255,0.65)", marginTop:"2px" }}>
-              Spend your XP on Premium days, exclusive notes, and special badges!
+              Spend your XP on exclusive notes, test packs, and special badges!
             </div>
           </div>
           <button onClick={()=>onNav("rewardsStore")} style={{ ...S.btn, background:"#fff", color:"#7C3AED", fontSize:"13px", padding:"9px 18px", flexShrink:0 }}>
@@ -25020,7 +25093,7 @@ function RewardsStore({ userXP = 2750 }) {
     showToast(`${item.title} redeemed! Enjoy 🎉`);
   };
 
-  const catColors = { Premium:{ c:T.amber,bg:"#FEF3C7" }, Content:{ c:T.purple,bg:"#EDE9FE" }, Badge:{ c:T.sky,bg:"#E0F2FE" }, Tests:{ c:T.g600,bg:T.g50 } };
+  const catColors = { Content:{ c:T.purple,bg:"#EDE9FE" }, Badge:{ c:T.sky,bg:"#E0F2FE" }, Tests:{ c:T.g600,bg:T.g50 } };
 
   return (
     <div style={S.page}>
@@ -25028,7 +25101,7 @@ function RewardsStore({ userXP = 2750 }) {
       <div style={{ ...S.flexBetween, marginBottom:"22px" }}>
         <div>
           <h1 style={{ ...S.h1, marginBottom:"3px" }}>🎁 Rewards Store</h1>
-          <p style={S.sub}>Redeem your XP for premium rewards and exclusive content</p>
+          <p style={S.sub}>Redeem your XP for rewards and exclusive content</p>
         </div>
         <div style={{ ...S.card, padding:"12px 18px", display:"flex", gap:10, alignItems:"center" }}>
           <span style={{ fontSize:"20px" }}>⚡</span>
