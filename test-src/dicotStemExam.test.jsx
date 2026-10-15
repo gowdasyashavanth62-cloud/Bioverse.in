@@ -784,7 +784,7 @@ describe("Dicot Stem (dg10) -- dg1-dg9 regression remains intact", () => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
     expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
   });
 
   it("DG10 Foundation/Explore/Label/Mismatch/Identify data remain intact (spot check: xpReward, structure count, SVG registration, title, chapter)", () => {

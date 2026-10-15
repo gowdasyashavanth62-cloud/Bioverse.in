@@ -12,8 +12,8 @@ afterEach(() => {
 describe("Diagram Center thumbnails (DG1-DG9)", () => {
   it("every diagram declares an svg-type image backed by a real, distinct component", () => {
     const svgDiagrams = DIAGRAM_DATA.filter(d => d.image?.type === "svg");
-    // All twelve curriculum diagrams use real SVG artwork, not emoji/placeholder images.
-    expect(svgDiagrams.length).toBe(12);
+    // All thirteen curriculum diagrams use real SVG artwork, not emoji/placeholder images.
+    expect(svgDiagrams.length).toBe(13);
     const componentRefs = svgDiagrams.map(d => DIAGRAM_SVG_COMPONENTS[d.image.component]);
     // Every referenced component must actually exist in the registry.
     componentRefs.forEach(c => expect(typeof c).toBe("function"));
@@ -33,7 +33,7 @@ describe("Diagram Center thumbnails (DG1-DG9)", () => {
     expect(svgEls.length).toBeGreaterThanOrEqual(svgDiagramCount);
 
     // The old bug rendered "🖼" as each *card's* thumbnail for every diagram
-    // whose image.type wasn't "emoji" — i.e. all 9 curriculum diagrams.
+    // whose image.type wasn't "emoji" — i.e. every curriculum diagram (13 now).
     // Scope the check to each diagram's own card (found via its title),
     // since the page header separately and legitimately uses the same
     // emoji as its own icon.

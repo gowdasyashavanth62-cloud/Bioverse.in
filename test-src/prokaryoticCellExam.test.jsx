@@ -96,14 +96,40 @@ describe("STEP 20F — target coverage", () => {
     expect([...seen].sort()).toEqual([...PCELL_IDS].sort());
   });
 
-  it("every structure is independently reachable as a target (sampled across sessions)", () => {
-    const seen = new Set();
-    for (let i = 0; i < 25 && seen.size < TOTAL; i++) {
-      const { container, unmount } = openExamMode();
-      seen.add(getHighlightedStructureId(container));
-      unmount();
+  it("every structure is independently reachable as a target (forced deterministically, no random sampling)", () => {
+    // Fisher-Yates is deterministic for given Math.random() inputs: feeding a
+    // no-op value (~1) on every iteration except i === k, where 0 swaps the
+    // untouched element k into slot 0, forces structure k into Question 1.
+    // ExamMode builds its order twice on mount (lazy useState + reset effect)
+    // and the SECOND build is rendered, so the first (TOTAL - 1) calls are
+    // padding. This proves each structure can be the target -- every time.
+    const NO_SWAP = 0.999999999;
+    const forcedSequence = (k) => {
+      const values = [];
+      for (let i = TOTAL - 1; i >= 1; i--) values.push(i === k ? 0 : NO_SWAP);
+      return values;
+    };
+    const seen = [];
+    for (let k = 0; k < TOTAL; k++) {
+      const sequence = [...new Array(TOTAL - 1).fill(0.5), ...forcedSequence(k)];
+      let call = 0;
+      const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+        const v = call < sequence.length ? sequence[call] : 0.5;
+        call++;
+        return v;
+      });
+      try {
+        const { container, unmount } = openExamMode();
+        const targetId = getHighlightedStructureId(container);
+        expect(targetId).toBe(PCELL_IDS[k]);
+        seen.push(targetId);
+        unmount();
+      } finally {
+        randomSpy.mockRestore();
+      }
     }
-    expect(seen.size).toBe(TOTAL);
+    expect(new Set(seen).size).toBe(TOTAL);
+    expect(seen).toEqual(PCELL_IDS);
   });
 });
 

@@ -851,6 +851,75 @@ const DIAGRAM_DATA = [
         quiz: { acceptableAnswers: ["metaxylem", "meta xylem"] } },
     ],
   },
+  {
+    id: "dg13",
+    title: "T.S. of a Dicot Leaf",
+    level: "1st PU",
+    chapter: "Ch 6 Anatomy of Flowering Plants",
+    category: "Plant Anatomy",
+    difficulty: "Medium",
+    description: "A transverse section of a typical dicotyledonous (dorsiventral) leaf, showing the upper and lower epidermis, the mesophyll differentiated into palisade and spongy parenchyma with intercellular air spaces, a vascular bundle (vein) with xylem towards the upper side and phloem towards the lower side, and a stoma on the lower epidermis.",
+    image: { type: "svg", component: "dicotLeaf" },
+    xpReward: 65,
+    importantPoints: [
+      "The dicot leaf is dorsiventral: the upper (adaxial) and lower (abaxial) surfaces are structurally different.",
+      "The epidermis on both surfaces is covered with a cuticle, and stomata are present mostly on the lower epidermis.",
+      "The tissue between the upper and lower epidermis is called the mesophyll, and it contains chloroplasts for photosynthesis.",
+      "The palisade parenchyma lies towards the upper surface and is made of elongated cells arranged vertically and parallel to each other.",
+      "The spongy parenchyma lies towards the lower surface and is made of oval or round, loosely arranged cells with large intercellular air spaces.",
+      "Vascular bundles occur in the veins and the midrib, and each is surrounded by a layer of thick-walled bundle sheath cells.",
+      "In a leaf vascular bundle the xylem lies towards the upper surface and the phloem towards the lower surface.",
+      "Each stoma is a pore bounded by two kidney-shaped (bean-shaped) guard cells.",
+      "Intercellular air spaces connect with the stomata and allow gaseous exchange.",
+    ],
+    structures: [
+      { id: "upperEpidermis", name: "Upper Epidermis",
+        shortDescription: "Single protective layer on the upper (adaxial) surface, covered by a cuticle.",
+        explanation: "The upper epidermis is the outermost layer on the adaxial surface of the leaf. It is covered by a cuticle that reduces water loss, and it has few or no stomata.",
+        position: { xPct: 50, yPct: 20 }, labelPosition: { xPct: 97, yPct: 14 },
+        quiz: { acceptableAnswers: ["upper epidermis", "adaxial epidermis"] } },
+      { id: "palisadeParenchyma", name: "Palisade Parenchyma",
+        shortDescription: "Elongated, vertically arranged mesophyll cells just below the upper epidermis.",
+        explanation: "The palisade parenchyma is the upper part of the mesophyll. Its cells are elongated and arranged vertically and parallel to each other, and they are rich in chloroplasts, so most photosynthesis occurs here.",
+        position: { xPct: 21.5, yPct: 33 }, labelPosition: { xPct: 3, yPct: 30 },
+        quiz: { acceptableAnswers: ["palisade parenchyma", "palisade mesophyll"] } },
+      { id: "spongyParenchyma", name: "Spongy Parenchyma",
+        shortDescription: "Oval or round, loosely arranged mesophyll cells on the lower side.",
+        explanation: "The spongy parenchyma forms the lower part of the mesophyll. Its cells are oval or round and loosely arranged, leaving large intercellular air spaces between them.",
+        position: { xPct: 62, yPct: 55 }, labelPosition: { xPct: 97, yPct: 50 },
+        quiz: { acceptableAnswers: ["spongy parenchyma", "spongy mesophyll"] } },
+      { id: "airSpace", name: "Intercellular Air Space",
+        shortDescription: "Gap between spongy cells, connected to the stomata for gas exchange.",
+        explanation: "Intercellular air spaces lie between the loosely arranged spongy cells, and the largest one is the sub-stomatal cavity just above the stoma. They connect with the stomata and allow gaseous exchange.",
+        position: { xPct: 70, yPct: 73.5 }, labelPosition: { xPct: 97, yPct: 66 },
+        quiz: { acceptableAnswers: ["intercellular air space", "intercellular space", "air space", "intercellular air spaces"] } },
+      { id: "vascularBundle", name: "Vascular Bundle",
+        shortDescription: "Vein tissue surrounded by a thick-walled bundle sheath.",
+        explanation: "A vascular bundle occurs in each vein and in the midrib. It is surrounded by a layer of thick-walled bundle sheath cells, and its size depends on the size of the vein.",
+        position: { xPct: 27, yPct: 58 }, labelPosition: { xPct: 3, yPct: 46 },
+        quiz: { acceptableAnswers: ["vascular bundle", "vein", "vascular bundles"] } },
+      { id: "xylem", name: "Xylem",
+        shortDescription: "Water-conducting tissue on the upper side of the vascular bundle.",
+        explanation: "The xylem conducts water and minerals into the leaf. In the leaf's vascular bundle it lies towards the upper (adaxial) surface.",
+        position: { xPct: 36, yPct: 52 }, labelPosition: { xPct: 3, yPct: 58 },
+        quiz: { acceptableAnswers: ["xylem"] } },
+      { id: "phloem", name: "Phloem",
+        shortDescription: "Food-conducting tissue on the lower side of the vascular bundle.",
+        explanation: "The phloem carries the food made in photosynthesis away from the leaf. In the leaf's vascular bundle it lies towards the lower (abaxial) surface.",
+        position: { xPct: 36, yPct: 63.5 }, labelPosition: { xPct: 3, yPct: 70 },
+        quiz: { acceptableAnswers: ["phloem"] } },
+      { id: "lowerEpidermis", name: "Lower Epidermis",
+        shortDescription: "Protective layer on the lower (abaxial) surface, with most of the stomata.",
+        explanation: "The lower epidermis covers the abaxial surface of the leaf. It has a cuticle and carries most of the stomata.",
+        position: { xPct: 30, yPct: 80 }, labelPosition: { xPct: 3, yPct: 84 },
+        quiz: { acceptableAnswers: ["lower epidermis", "abaxial epidermis"] } },
+      { id: "stoma", name: "Stoma",
+        shortDescription: "Pore in the lower epidermis, bounded by two kidney-shaped guard cells.",
+        explanation: "A stoma is a small pore in the epidermis bounded by two kidney-shaped guard cells. It lets CO2 and O2 pass and releases water vapour, and in the dicot leaf most stomata are on the lower epidermis.",
+        position: { xPct: 70, yPct: 80 }, labelPosition: { xPct: 97, yPct: 86 },
+        quiz: { acceptableAnswers: ["stoma", "stomata"] } },
+    ],
+  },
 ];
 
 // Normalizes any DIAGRAM_DATA entry — the new game-ready shape (dg1) or the
@@ -18646,6 +18715,181 @@ function MonocotStemSVG({
   );
 }
 
+// ── DicotLeafSVG (DG13) ───────────────────────────────────────────────
+// A dorsiventral (dicot) leaf in transverse section. UPPER surface on top:
+// upper epidermis -> palisade parenchyma (tall, parallel, tightly packed) ->
+// spongy parenchyma (round, loose, with intercellular air spaces) -> lower
+// epidermis. One vascular bundle sits in the mesophyll with the xylem on its
+// UPPER side and the phloem on its LOWER side; a stoma with two kidney-shaped
+// guard cells opens through the lower epidermis into a sub-stomatal air space.
+// Same prop/highlight contract as every other diagram SVG, so the generic
+// engine and touch resolver drive it unchanged. Fully deterministic.
+const DICOT_LEAF_BUNDLE = { x: 36, y: 58, r: 11 };
+const DICOT_LEAF_STOMA_X = 70;
+
+function DicotLeafSVG({
+  selectedId, onSelectStructure,
+  lockedIds, flashId, flashType, onDropStructure, dropEnabled,
+}) {
+  const [hoveredId, setHoveredId] = useState(null);
+  const locked = lockedIds || EMPTY_STRUCTURE_SET;
+  const isSelected = (id) => id === selectedId;
+  const isHovered = (id) => id === hoveredId;
+  const isLocked = (id) => locked.has(id);
+  const isActive = (id) => isSelected(id) || isHovered(id) || isLocked(id) || flashId === id;
+
+  const touchHandlers = useStructureTouchHandlers(onSelectStructure);
+  const structureProps = (id) => {
+    const flashCorrect = flashId === id && flashType === "correct";
+    const flashWrong = flashId === id && flashType === "wrong";
+    return {
+      "data-structure-id": id,
+      onMouseEnter: () => setHoveredId(id),
+      onMouseLeave: () => setHoveredId((h) => (h === id ? null : h)),
+      onClick: () => onSelectStructure && onSelectStructure(id),
+      onDragOver: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(id); } : undefined,
+      onDragLeave: dropEnabled ? () => setHoveredId((h) => (h === id ? null : h)) : undefined,
+      onDrop: dropEnabled ? (e) => { e.preventDefault(); setHoveredId(null); onDropStructure && onDropStructure(id, e); } : undefined,
+      style: {
+        cursor: onSelectStructure ? "pointer" : "default",
+        transition: "opacity 0.15s, filter 0.15s",
+        opacity: isActive(id) ? 1 : 0.92,
+        filter: flashWrong
+          ? "drop-shadow(0 0 5px rgba(239,68,68,0.9))"
+          : flashCorrect
+          ? "drop-shadow(0 0 5px rgba(16,185,129,0.95))"
+          : isLocked(id)
+          ? "drop-shadow(0 0 3px rgba(16,185,129,0.55))"
+          : isSelected(id)
+          ? "drop-shadow(0 0 4.5px rgba(245,158,11,0.95))"
+          : isHovered(id)
+          ? "drop-shadow(0 0 2.5px rgba(245,158,11,0.5))"
+          : "none",
+      },
+    };
+  };
+
+  const f = (n) => n.toFixed(2);
+  const { x: bx, y: by, r: br } = DICOT_LEAF_BUNDLE;
+  const sx = DICOT_LEAF_STOMA_X;
+
+  // Epidermal cells (flat boxes). The lower row leaves a gap for the stoma.
+  const upperCells = Array.from({ length: 12 }, (_, i) => 8.5 + i * 7);
+  const lowerCells = Array.from({ length: 12 }, (_, i) => 8.5 + i * 7).filter((x) => x + 6.6 < sx - 6 || x > sx + 6);
+  // Palisade columns: tall, parallel, tightly packed.
+  const palisade = Array.from({ length: 16 }, (_, i) => 9.5 + i * 5.2);
+  // Spongy cells and the small air spaces between them (skip the bundle & stoma chamber).
+  const spongy = [];
+  const gaps = [];
+  for (let row = 0; row < 5; row++) {
+    const gy = 46 + row * 6.4;
+    for (let col = 0; col < 10; col++) {
+      const gx = 12 + col * 8 + (row % 2 ? 4 : 0);
+      if (gx > 90) continue;
+      const nearBundle = Math.hypot(gx - bx, gy - by) < br + 3.6;
+      const nearChamber = Math.hypot(gx - sx, gy - 73.5) < 7;
+      if (nearBundle || nearChamber) continue;
+      spongy.push([gx, gy, (row * 7 + col * 3) % 5 * 12 - 24]);
+      if (gy < 70) gaps.push([gx + 4, gy + 3.2]);
+    }
+  }
+  const gapsClear = gaps.filter(([gx, gy]) => Math.hypot(gx - bx, gy - by) > br + 2 && Math.hypot(gx - sx, gy - 73.5) > 6);
+
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", touchAction: "manipulation" }} {...touchHandlers} role="img" aria-label="Transverse section of a dicot leaf diagram">
+      <defs>
+        <linearGradient id="dl-meso" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#BBF7D0" /><stop offset="100%" stopColor="#ECFCCB" />
+        </linearGradient>
+      </defs>
+
+      {/* Spongy parenchyma -- loose, rounded cells (background of the lower mesophyll) */}
+      <g id="spongyParenchyma" {...structureProps("spongyParenchyma")}>
+        <rect x="8" y="43" width="84" height="33" fill="url(#dl-meso)"
+          stroke={isActive("spongyParenchyma") ? "#16A34A" : "none"} strokeWidth={isActive("spongyParenchyma") ? 1.2 : 0} />
+        {spongy.map(([x, y, rot], i) => (
+          <ellipse key={i} cx={f(x)} cy={f(y)} rx="3.7" ry="2.9" transform={`rotate(${rot} ${f(x)} ${f(y)})`}
+            fill="#86EFAC" stroke="#15803D" strokeWidth="0.3" />
+        ))}
+      </g>
+
+      {/* Intercellular air spaces -- small gaps plus the larger sub-stomatal cavity */}
+      <g id="airSpace" {...structureProps("airSpace")}>
+        {gapsClear.map(([x, y], i) => (
+          <ellipse key={i} cx={f(x)} cy={f(y)} rx={isActive("airSpace") ? 1.4 : 1.1} ry={isActive("airSpace") ? 1 : 0.8}
+            fill="#E0F2FE" stroke="#0284C7" strokeWidth="0.22" />
+        ))}
+        <ellipse cx={sx} cy="73.5" rx={isActive("airSpace") ? 6 : 5.4} ry={isActive("airSpace") ? 3.4 : 3}
+          fill="#E0F2FE" stroke="#0284C7" strokeWidth="0.35" />
+      </g>
+
+      {/* Vascular bundle -- thick-walled bundle sheath round the conducting tissue */}
+      <g id="vascularBundle" {...structureProps("vascularBundle")}>
+        <circle cx={bx} cy={by} r={br} fill="#FEF9C3"
+          stroke={isActive("vascularBundle") ? "#CA8A04" : "#A16207"} strokeWidth={isActive("vascularBundle") ? 1.6 : 1.1} />
+        <circle cx={bx} cy={by} r={br - 1.6} fill="none" stroke="#EAB308" strokeWidth="0.3" strokeDasharray="1.2 0.8" />
+      </g>
+
+      {/* Xylem -- upper (adaxial) side of the bundle: a few wide vessels */}
+      <g id="xylem" {...structureProps("xylem")}>
+        {[[-3.4, -5.4], [0.2, -6.4], [3.6, -5.2], [-1.6, -3.2], [1.9, -2.8]].map(([dx, dy], i) => (
+          <circle key={i} cx={f(bx + dx)} cy={f(by + dy)} r={isActive("xylem") ? 1.55 : 1.35}
+            fill="#FCA5A5" stroke="#991B1B" strokeWidth="0.3" />
+        ))}
+      </g>
+
+      {/* Phloem -- lower (abaxial) side of the bundle: small sieve tubes + companion cells */}
+      <g id="phloem" {...structureProps("phloem")}>
+        <ellipse cx={bx} cy={by + 5.5} rx={isActive("phloem") ? 6 : 5.5} ry={isActive("phloem") ? 3.5 : 3.1}
+          fill="#FBCFE8" stroke="#BE185D" strokeWidth="0.35" />
+        {[[-2.8, 5.2], [0, 6], [2.8, 5.2], [-1.4, 4.2], [1.4, 4.4]].map(([dx, dy], i) => (
+          <circle key={i} cx={f(bx + dx)} cy={f(by + dy + 0.3)} r="0.85" fill="#F472B6" stroke="#9D174D" strokeWidth="0.18" />
+        ))}
+      </g>
+
+      {/* Palisade parenchyma -- tall columns, parallel, tightly packed */}
+      <g id="palisadeParenchyma" {...structureProps("palisadeParenchyma")}>
+        <rect x="8" y="23" width="84" height="19.5" fill="transparent" />
+        {palisade.map((x, i) => (
+          <rect key={i} x={f(x)} y="24" width="4.4" height="18" rx="2"
+            fill={isActive("palisadeParenchyma") ? "#4ADE80" : "#22C55E"} stroke="#166534" strokeWidth="0.3" />
+        ))}
+      </g>
+
+      {/* Upper epidermis -- single layer with a cuticle on top */}
+      <g id="upperEpidermis" {...structureProps("upperEpidermis")}>
+        <rect x="8" y="14.8" width="84" height="9" fill="transparent" />
+        {upperCells.map((x, i) => (
+          <rect key={i} x={f(x)} y="17.4" width="6.6" height="5.6" fill="#FEF3C7"
+            stroke={isActive("upperEpidermis") ? "#B45309" : "#A16207"} strokeWidth={isActive("upperEpidermis") ? 0.6 : 0.35} />
+        ))}
+        <line x1="8" y1="16.6" x2="92" y2="16.6" stroke="#78350F" strokeWidth={isActive("upperEpidermis") ? 1.1 : 0.8} />
+      </g>
+
+      {/* Lower epidermis -- single layer with a cuticle below; gap left for the stoma */}
+      <g id="lowerEpidermis" {...structureProps("lowerEpidermis")}>
+        <rect x="8" y="76" width="84" height="9" fill="transparent" />
+        {lowerCells.map((x, i) => (
+          <rect key={i} x={f(x)} y="77" width="6.6" height="5.6" fill="#FEF3C7"
+            stroke={isActive("lowerEpidermis") ? "#B45309" : "#A16207"} strokeWidth={isActive("lowerEpidermis") ? 0.6 : 0.35} />
+        ))}
+        <line x1="8" y1="83.6" x2={sx - 6} y2="83.6" stroke="#78350F" strokeWidth={isActive("lowerEpidermis") ? 1.1 : 0.8} />
+        <line x1={sx + 6} y1="83.6" x2="92" y2="83.6" stroke="#78350F" strokeWidth={isActive("lowerEpidermis") ? 1.1 : 0.8} />
+      </g>
+
+      {/* Stoma -- pore flanked by two kidney-shaped guard cells, in the lower epidermis */}
+      <g id="stoma" {...structureProps("stoma")}>
+        <rect x={sx - 6.5} y="76" width="13" height="9" fill="transparent" />
+        <path d={`M ${sx - 1} 77.2 C ${sx - 6.6} 77.6 ${sx - 6.6} 82.4 ${sx - 1} 82.8 C ${sx - 3.3} 81 ${sx - 3.3} 79 ${sx - 1} 77.2 Z`}
+          fill="#4ADE80" stroke="#166534" strokeWidth="0.35" />
+        <path d={`M ${sx + 1} 77.2 C ${sx + 6.6} 77.6 ${sx + 6.6} 82.4 ${sx + 1} 82.8 C ${sx + 3.3} 81 ${sx + 3.3} 79 ${sx + 1} 77.2 Z`}
+          fill="#4ADE80" stroke="#166534" strokeWidth="0.35" />
+        <line x1={sx} y1="77.4" x2={sx} y2="82.6" stroke={isActive("stoma") ? "#F59E0B" : "#0284C7"} strokeWidth={isActive("stoma") ? 1.2 : 0.7} strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
 // String-keyed registry (same convention as PROCEDURAL_3D_MODELS in the
 // Virtual Lab) so DIAGRAM_DATA can reference an SVG component by name
 // without holding a live component reference in the data array itself.
@@ -18662,6 +18906,7 @@ const DIAGRAM_SVG_COMPONENTS = {
   dicotStem: DicotStemSVG,
   monocotRoot: MonocotRootSVG,
   monocotStem: MonocotStemSVG,
+  dicotLeaf: DicotLeafSVG,
 };
 
 

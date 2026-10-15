@@ -106,9 +106,9 @@ describe("resolveStructureTap — responsive / scaled SVG hit testing", () => {
   });
 });
 
-describe("all 12 diagram SVGs expose every structure to the shared touch layer", () => {
+describe("all 13 diagram SVGs expose every structure to the shared touch layer", () => {
   it("each diagram renders a [data-structure-id] group per structure, with touch-action: manipulation (page still scrolls)", () => {
-    expect(DIAGRAMS.length).toBe(12);
+    expect(DIAGRAMS.length).toBe(13);
     DIAGRAMS.forEach(d => {
       const Svg = DIAGRAM_SVG_COMPONENTS[d.image.component];
       const { container, unmount } = render(<Svg selectedId={null} onSelectStructure={() => {}} />);

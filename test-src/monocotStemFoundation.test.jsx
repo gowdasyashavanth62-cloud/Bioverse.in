@@ -314,8 +314,8 @@ describe("Monocot Stem (dg12) -- no regression to DG1-DG11", () => {
 
   it("dg1 through dg12 are all present, with unique ids and unique SVG components", () => {
     for (let i = 1; i <= 12; i++) expect(DIAGRAM_DATA.find(d => d.id === `dg${i}`)).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
-    expect(new Set(DIAGRAM_DATA.map(d => d.id)).size).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
+    expect(new Set(DIAGRAM_DATA.map(d => d.id)).size).toBe(13);
     const svgRefs = DIAGRAM_DATA.filter(d => d.image?.type === "svg").map(d => DIAGRAM_SVG_COMPONENTS[d.image.component]);
     expect(new Set(svgRefs).size).toBe(svgRefs.length);
   });
