@@ -242,7 +242,7 @@ describe("Monocot Root (dg11) -- no regression to DG9 / DG10", () => {
 
   it("dg1 through dg11 are all present, with unique ids and unique SVG components", () => {
     for (let i = 1; i <= 11; i++) expect(DIAGRAM_DATA.find(d => d.id === `dg${i}`)).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
     const svgRefs = DIAGRAM_DATA.filter(d => d.image?.type === "svg").map(d => DIAGRAM_SVG_COMPONENTS[d.image.component]);
     expect(new Set(svgRefs).size).toBe(svgRefs.length);
   });

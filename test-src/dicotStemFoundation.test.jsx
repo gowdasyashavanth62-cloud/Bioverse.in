@@ -332,7 +332,7 @@ describe("Dicot Stem (dg10) — regression: prior diagrams untouched", () => {
   });
 
   it("DIAGRAM_DATA now has exactly 10 diagrams (DG1–DG9 plus the new DG10)", () => {
-    expect(DIAGRAM_DATA.length).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
   });
 
   it("DG11 has not been started", () => {

@@ -496,7 +496,7 @@ describe("Dicot Stem (dg10) -- dg1-dg9 regression remains intact", () => {
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
     expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
   });
 });
 

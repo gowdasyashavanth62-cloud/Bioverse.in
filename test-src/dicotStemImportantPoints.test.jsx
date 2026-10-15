@@ -252,7 +252,7 @@ describe("Dicot Stem (dg10) — regression: all seven modes resolve the same reg
       expect(DIAGRAM_DATA.find(d => d.id === id)).toBeTruthy();
     });
     expect(DIAGRAM_DATA.find(d => d.id === "dg11")).toBeTruthy();
-    expect(DIAGRAM_DATA.length).toBe(12);
+    expect(DIAGRAM_DATA.length).toBe(13);
   });
 
   it("DG10's other frozen data (xpReward, structure count, SVG, title, chapter) remains intact", () => {
