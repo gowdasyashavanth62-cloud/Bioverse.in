@@ -16328,6 +16328,9 @@ function GameHub({ user, onNav }) {
   const [xp, setXp] = useState(user?.xp || 0);
   const [streak, setStreak] = useState(user?.streak || 0);
   const [toast, setToast] = useState("");
+  // Back: pick-count -> pick-chapter -> hub; playing -> hub.
+  useBackLayer(view !== "hub", () => setView("hub"));
+  useBackLayer(view === "pickCount", () => setView("pickChapter"));
 
   useEffect(() => {
     sb.getAchievements().then(setAchievements);
@@ -19821,6 +19824,7 @@ function DiagramGame({ diagram }) {
 function DiagramCenter() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeDiagram, setActiveDiagram] = useState(null);
+  useBackLayer(!!activeDiagram, () => setActiveDiagram(null));
   const diagrams = DIAGRAM_DATA.map(normalizeDiagram);
   const categories=["All",...[...new Set(diagrams.map(d=>d.category))]];
   const filtered=activeCategory==="All"?diagrams:diagrams.filter(d=>d.category===activeCategory);
@@ -20779,6 +20783,7 @@ const AdminLine = ({ data, height=50, color=A.purple }) => {
 
 // Modal wrapper
 function Modal({ title, onClose, children, width="540px" }) {
+  useBackLayer(true, onClose);
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}>
       <div style={{ background:A.surface, borderRadius:"16px", width:"100%", maxWidth:width, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 60px rgba(0,0,0,0.2)" }}>
@@ -20794,6 +20799,7 @@ function Modal({ title, onClose, children, width="540px" }) {
 
 // Confirm dialog
 function Confirm({ message, onConfirm, onCancel }) {
+  useBackLayer(true, onCancel);
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1100, display:"flex", alignItems:"center", justifyContent:"center" }}>
       <div style={{ background:A.surface, borderRadius:"14px", padding:"28px", maxWidth:"380px", width:"100%", textAlign:"center", boxShadow:"0 20px 50px rgba(0,0,0,0.2)" }}>
@@ -24257,6 +24263,7 @@ function AdminPanelFull({ onExitAdmin }) {
     window.addEventListener("resize",h);
     return()=>window.removeEventListener("resize",h);
   },[]);
+  useBackLayer(isMobile && sidebarOpen, () => setSidebarOpen(false));
 
   const handleAdminNav = (key) => {
     if(key==="exitAdmin"){ onExitAdmin(); return; }
@@ -24671,6 +24678,8 @@ function CommunityForum({ user }) {
   const [replyText, setReplyText] = useState("");
   const [toast, setToast] = useState("");
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
+  useBackLayer(view === "post", () => setView("feed"));
+  useBackLayer(newPostModal, () => setNewPostModal(false));
 
   const categories = ["All","1st PU Biology","2nd PU Biology","KCET Biology","NEET Biology"];
   const filtered = category==="All" ? COMMUNITY_POSTS : COMMUNITY_POSTS.filter(p=>p.category===category);
@@ -25931,6 +25940,7 @@ function BioVisionNav({ page, isMobile, user, onNav, mobileNavOpen, onToggleMobi
 
 function BioVisionShell({ user, page, chapter, syllabusLevel, isMobile, uiMode, setUiMode, setChapter, setSyllabusLevel, handleNav }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useBackLayer(isMobile && mobileNavOpen, () => setMobileNavOpen(false));
   // Safety net: never leave the mobile drawer open across a navigation
   // that happened some other way (e.g. a page-internal action).
   useEffect(() => { setMobileNavOpen(false); }, [page]);
@@ -25966,6 +25976,7 @@ function BioVisionShell({ user, page, chapter, syllabusLevel, isMobile, uiMode, 
 // shell, just moved into its own component so App() can pick between the
 // two. Nothing about its rendered output changes.
 function CurrentShell({ user, page, chapter, syllabusLevel, isMobile, sidebarOpen, setSidebarOpen, uiMode, setUiMode, setChapter, setSyllabusLevel, handleNav, pageTitles, sidebarActive, setMode }) {
+  useBackLayer(isMobile && sidebarOpen, () => setSidebarOpen(false));
   return (
     <div style={{ fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", minHeight: "100vh", background: "#F8FFFE", color: "#0D1F17", display: "flex" }}>
       <SidebarWithAI active={sidebarActive} onNav={handleNav} user={user || {}} isMobile={isMobile} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -26006,8 +26017,205 @@ function CurrentShell({ user, page, chapter, syllabusLevel, isMobile, sidebarOpe
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACK-BUTTON NAVIGATION (Android system Back / browser Back)
+// The app switches screens with React state and has no router, so before this
+// block the browser history never changed and Back left the app. Design:
+//  - history entry 0 is a "root" sentinel; every in-app screen/overlay is one
+//    entry above it. The URL is never changed (refresh/deep-open behave as before).
+//  - "page" entries mirror {screen,page,chapter,level}; "layer" entries are
+//    overlays (drawer, modal, sub-view) registered with useBackLayer().
+//  - Back on a layer closes it; Back on a page restores that page; entries whose
+//    content is gone are skipped; Back at the root shows "press again to exit".
+// ═══════════════════════════════════════════════════════════════════════════════
+const BackNav = {
+  entries: [], idx: 0, ready: false, pending: true,
+  suppress: 0, suppressAt: 0, rootTimer: null, exitWindowMs: 2200,
+  getSnap: null, applySnap: null, lastSnap: null, memSid: null,
+  reset() {
+    BackNav.entries = []; BackNav.idx = 0; BackNav.ready = false; BackNav.pending = true;
+    BackNav.suppress = 0; BackNav.getSnap = null; BackNav.applySnap = null; BackNav.lastSnap = null;
+    clearTimeout(BackNav.rootTimer); BackNav.rootTimer = null;
+    try { window.history.replaceState(null, ""); } catch {}
+  },
+  init() {
+    if (BackNav.ready) return;
+    BackNav.ready = true; BackNav.pending = true;
+    const st = window.history.state;
+    if (st && st.bv && typeof st.idx === "number") {
+      // Page refresh: this entry's position is known, entries below are not.
+      BackNav.idx = st.idx; BackNav.entries = [];
+      for (let i = 0; i < st.idx; i++) BackNav.entries[i] = i === 0 ? { t: "root" } : { t: "page", snap: null };
+      BackNav.entries[st.idx] = st.root ? { t: "root", base: st.snap || null } : { t: "page", snap: st.snap || null };
+    } else {
+      try { window.history.replaceState({ bv: 1, idx: 0, root: true }, ""); } catch {}
+      BackNav.idx = 0; BackNav.entries = [{ t: "root" }];
+    }
+  },
+  initialSnap() {
+    const e = BackNav.entries[BackNav.idx];
+    return e && e.t === "page" ? e.snap : null;
+  },
+  push(item, extra) {
+    const i = BackNav.idx + 1;
+    BackNav.entries.length = i; BackNav.entries[i] = item; BackNav.idx = i;
+    try { window.history.pushState({ bv: 1, idx: i, ...(extra || {}) }, ""); } catch {}
+  },
+  ensureBase() {            // sitting on the root sentinel: put the shown screen back above it first
+    if (BackNav.idx === 0 && !BackNav.pending && BackNav.getSnap) {
+      clearTimeout(BackNav.rootTimer); BackNav.rootTimer = null;
+      const s = BackNav.getSnap(); BackNav.push({ t: "page", snap: s }, { snap: s });
+    }
+  },
+  goTo(target) {            // programmatic Back to entry `target`; its popstate is swallowed
+    const n = BackNav.idx - target;
+    if (n <= 0) return;
+    BackNav.suppress++; BackNav.suppressAt = Date.now(); BackNav.idx = target;
+    try { window.history.go(-n); } catch { BackNav.suppress = 0; }
+  },
+};
+
+const bnKey = (s) => (s ? `${s.screen}|${s.page}|${s.level || ""}|${s.chapterId || ""}|${s.sid || ""}` : "");
+// Navigation session id: history entries made under one sign-in session are never
+// restored under another (changes on login and logout). Kept in sessionStorage so a
+// refresh keeps the same id.
+const BN_SID_KEY = "bv_nav_sid";
+function bnNewSid() {
+  const sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  BackNav.memSid = sid;
+  try { window.sessionStorage.setItem(BN_SID_KEY, sid); } catch {}
+  return sid;
+}
+function bnReadSid() {
+  try { const sid = window.sessionStorage.getItem(BN_SID_KEY); if (sid) { BackNav.memSid = sid; return sid; } } catch {}
+  return BackNav.memSid || bnNewSid();
+}
+function bnMakeSnap(screen, page, chapter, level, sid) {
+  let ch = null;
+  if (chapter) { try { ch = JSON.parse(JSON.stringify(chapter)); } catch { ch = null; } }
+  return { screen, page, sid: sid || "", level: page === "syllabus" ? level : "", chapterId: chapter ? (chapter.id ?? chapter.title ?? "") : "", chapter: ch };
+}
+
+function bnShowExitHint() {
+  try {
+    const old = document.querySelector("[data-testid='bv-exit-hint']");
+    if (old) old.remove();
+    const el = document.createElement("div");
+    el.setAttribute("data-testid", "bv-exit-hint"); el.setAttribute("role", "status");
+    el.textContent = "Press Back again to exit";
+    el.style.cssText = "position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#0D1F17;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:600;z-index:3000;box-shadow:0 6px 20px rgba(0,0,0,0.3);font-family:Inter,sans-serif";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), BackNav.exitWindowMs);
+  } catch {}
+}
+
+// Reached the root sentinel: stay here (a second Back leaves natively), then
+// re-arm the guard once the window has passed.
+function bnRootBack() {
+  bnShowExitHint();
+  clearTimeout(BackNav.rootTimer);
+  BackNav.rootTimer = setTimeout(() => {
+    BackNav.rootTimer = null;
+    if (BackNav.idx === 0 && BackNav.getSnap) { const s = BackNav.getSnap(); BackNav.push({ t: "page", snap: s }, { snap: s }); }
+  }, BackNav.exitWindowMs);
+}
+
+function bnOnPop(e) {
+  const B = BackNav;
+  if (B.suppress > 0 && Date.now() - B.suppressAt < 1500) { B.suppress--; return; }
+  B.suppress = 0;
+  const st = e.state;
+  if (!st || !st.bv) return;                    // not our entry: browser is leaving the app
+  const prev = B.idx, next = st.idx;
+  B.idx = next;
+  for (let i = Math.min(prev, B.entries.length - 1); i > next; i--) {   // close overlays above, top first
+    const en = B.entries[i];
+    if (en && en.t === "layer" && en.alive) { en.alive = false; try { en.onBack(); } catch {} }
+  }
+  let target = B.entries[next];
+  if (!target) { target = st.root ? { t: "root" } : { t: "page", snap: st.snap || null }; B.entries[next] = target; }
+  const back = next < prev;
+  if (target.t === "root") {
+    if (!back) return;
+    // Reached the root in a multi-entry jump (history menu, or the browser skipping entries):
+    // if the screen shown is not the app's first screen, show that screen instead of the exit hint.
+    const base = target.base;
+    if (prev > next + 1 && base && B.getSnap && B.applySnap && bnKey(B.getSnap()) !== bnKey(base) && B.applySnap(base)) {
+      B.push({ t: "page", snap: base }, { snap: base });
+      return;
+    }
+    bnRootBack(); return;
+  }
+  if (target.t === "layer") { if (!target.alive && back) window.history.back(); return; }   // skip closed overlay
+  const ok = B.applySnap ? B.applySnap(target.snap || st.snap) : true;
+  if (!ok && back) window.history.back();       // entry not valid now (e.g. login screen after sign-in)
+}
+
+// Opens a history entry while `active` is true so Back closes the overlay.
+function useBackLayer(active, onBack) {
+  const cb = useRef(onBack); cb.current = onBack;
+  const held = useRef(null);
+  useEffect(() => {
+    if (!active) return undefined;
+    BackNav.init();
+    let entry = held.current;
+    if (entry && entry.closing) { entry.closing = false; clearTimeout(entry.timer); }   // StrictMode re-run
+    else { entry = { t: "layer", alive: true, closing: false, timer: null, onBack: () => cb.current && cb.current() }; held.current = entry; BackNav.ensureBase(); BackNav.push(entry, { layer: 1 }); }
+    return () => {
+      entry.closing = true;
+      entry.timer = setTimeout(() => {
+        entry.closing = false; if (held.current === entry) held.current = null;
+        if (!entry.alive) return;
+        entry.alive = false;
+        if (BackNav.entries[BackNav.idx] === entry) BackNav.goTo(BackNav.idx - 1);   // top: remove its entry
+      }, 0);
+    };
+  }, [active]);
+}
+
+// Mirrors {screen,page,chapter,level} into history and handles Back/Forward.
+function useAppBackSync(snap, applySnap) {
+  const snapRef = useRef(snap); snapRef.current = snap;
+  const applyRef = useRef(applySnap); applyRef.current = applySnap;
+  useEffect(() => {
+    BackNav.init();
+    BackNav.getSnap = () => snapRef.current;
+    BackNav.applySnap = (s) => applyRef.current(s);
+    window.addEventListener("popstate", bnOnPop);
+    return () => { window.removeEventListener("popstate", bnOnPop); clearTimeout(BackNav.rootTimer); BackNav.getSnap = null; BackNav.applySnap = null; };
+  }, []);
+  const key = bnKey(snap);
+  useEffect(() => {
+    const B = BackNav;
+    if (!B.ready || snap.screen === "loading") return;
+    const prevSnap = B.lastSnap; B.lastSnap = snap;
+    let p = B.idx; while (p > 0 && B.entries[p] && B.entries[p].t === "layer") p--;
+    const pe = B.entries[p];
+    if (B.pending) {
+      B.pending = false;
+      if (pe && pe.t === "page" && p === B.idx) { if (bnKey(pe.snap) !== key) { pe.snap = snap; try { window.history.replaceState({ bv: 1, idx: p, snap }, ""); } catch {} } return; }
+      if (pe && pe.t === "root") {            // remember the first screen on the root entry itself
+        pe.base = snap;
+        try { window.history.replaceState({ bv: 1, idx: 0, root: true, snap }, ""); } catch {}
+      }
+      B.push({ t: "page", snap }, { snap }); return;
+    }
+    if (pe && pe.t === "page" && bnKey(pe.snap) === key) return;        // already current
+    let q = p - 1; while (q > 0 && B.entries[q] && B.entries[q].t === "layer") q--;
+    const qe = q >= 0 ? B.entries[q] : null;
+    if (pe && pe.t === "page" && qe && qe.t === "page" && bnKey(qe.snap) === key) {   // in-app "back": pop, don't push a duplicate
+      for (let i = q + 1; i <= B.idx; i++) { const en = B.entries[i]; if (en && en.t === "layer") en.alive = false; }
+      B.goTo(q); return;
+    }
+    clearTimeout(B.rootTimer); B.rootTimer = null;
+    if (p === 0 && B.idx === 0 && prevSnap && bnKey(prevSnap) !== key) B.push({ t: "page", snap: prevSnap }, { snap: prevSnap });   // keep the screen we are leaving reachable
+    B.push({ t: "page", snap }, { snap });
+  }, [key]);
+}
+
 export default function App() {
   const [mode, setMode] = useState("student");
+  const [navSid, setNavSid] = useState(bnReadSid);
   // screen: "loading" | "role" | "studentAuth" | "dashboard"
   const [screen, setScreen] = useState("loading");
   const [user, setUser] = useState(null);
@@ -26022,6 +26230,7 @@ export default function App() {
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", h);
+    BackNav.init();
 
     // Try to restore Supabase session
     const session = sb.loadSession();
@@ -26031,6 +26240,12 @@ export default function App() {
         clearTimeout(timeout);
         setUser(p || { full_name: session.user.email?.split("@")[0], email: session.user.email, xp: 0, streak: 0, subscription_plan: "free" });
         setScreen("dashboard");
+        // After a refresh, return to the screen this history entry was showing.
+        const s0 = BackNav.initialSnap();
+        if (s0 && s0.screen === "dashboard" && s0.page && (s0.sid || "") === bnReadSid()) {
+          setPage(s0.page); setChapter(s0.chapter || null);
+          if (s0.level) setSyllabusLevel(s0.level);
+        }
       }).catch(() => { clearTimeout(timeout); setScreen("role"); });
     } else {
       setScreen("role");
@@ -26038,8 +26253,34 @@ export default function App() {
     return () => window.removeEventListener("resize", h);
   }, []);
 
+  // Back-button history sync. Only screens valid for the current sign-in state
+  // are restored; admin mode is never restored from history (it has its own
+  // login gate and is handled as an overlay below).
+  const userRef = useRef(user); userRef.current = user;
+  const sidRef = useRef(navSid); sidRef.current = navSid;
+  useAppBackSync(bnMakeSnap(screen, page, chapter, syllabusLevel, navSid), (s) => {
+    if (!s) return false;
+    if ((s.sid || "") !== sidRef.current) return false;     // entry belongs to a previous sign-in session
+    const loggedIn = !!userRef.current;
+    if (s.screen === "dashboard") {
+      if (!loggedIn) return false;
+      setScreen("dashboard"); setPage(s.page || "dashboard"); setChapter(s.chapter || null);
+      if (s.level) setSyllabusLevel(s.level);
+      setSidebarOpen(false);
+      return true;
+    }
+    if (s.screen === "role" || s.screen === "studentAuth") {
+      if (loggedIn) return false;
+      setScreen(s.screen); return true;
+    }
+    return false;
+  });
+  // Back out of admin mirrors the Exit Admin button: with no signed-in student, go to role selection.
+  useBackLayer(mode === "admin", () => { setMode("student"); if (!userRef.current) setScreen("role"); });
+
   const handleLoginSuccess = (u) => {
     if (!u) return;
+    setNavSid(bnNewSid());          // new sign-in session: older history entries are no longer restorable
     if (u.role === "admin") {
       setMode("admin");
       setScreen("dashboard");
@@ -26059,6 +26300,7 @@ export default function App() {
   const handleNav = (key) => {
     if (key === "logout") {
       sb.signOut();
+      setNavSid(bnNewSid());
       setUser(null); setScreen("role"); setPage("dashboard");
       return;
     }
