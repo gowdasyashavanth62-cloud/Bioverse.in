@@ -14972,6 +14972,179 @@ function BiodiversityConservationModel({ selectedId, onSelect, autoRotate }) {
 
 const PROCEDURAL_3D_MODELS = { chloroplast: ChloroplastModel, plantCell: PlantCellModel, dnaHelix: DNAHelixModel, taxonomyPyramid: TaxonomyPyramidModel, fiveKingdom: FiveKingdomModel, plantKingdom: PlantKingdomModel, animalKingdom: AnimalKingdomModel, floweringPlantMorphology: FloweringPlantMorphologyModel, plantAnatomy: PlantAnatomyModel, animalTissue: AnimalTissueModel, biomolecule: BiomoleculeModel, cellCycle: CellCycleModel, plantGrowth: PlantGrowthModel, respiratorySystem: RespiratorySystemModel, circulation: CirculationModel, nephron: NephronModel, neuron: NeuronModel, endocrineSystem: EndocrineSystemModel, musculoskeletal: MusculoskeletalModel, flowerReproduction: FlowerReproductionModel, reproductiveHealth: ReproductiveHealthModel, evolution: EvolutionModel, immuneSystem: ImmuneSystemModel, plantRespiration: PlantRespirationModel, humanReproduction: HumanReproductionModel, inheritanceGenetics: InheritanceGeneticsModel, microbesHumanWelfare: MicrobesHumanWelfareModel, biotechnologyPrinciples: BiotechnologyPrinciplesModel, biotechnologyApplications: BiotechnologyApplicationsModel, organismsPopulations: OrganismsPopulationsModel, ecosystem: EcosystemModel, biodiversityConservation: BiodiversityConservationModel };
 
+// ─── VIRTUAL LAB — UUID-AUTHORITATIVE CHAPTER REGISTRY ──────────────────────
+// A database-backed chapter is connected to its Lab by its immutable UUID,
+// never by its display name, so renaming a chapter in the CMS cannot detach
+// its Lab. The registry is scoped to one Supabase project: UUIDs differ
+// between projects, so an unrecognised project gets NO Lab mapping (visibly)
+// instead of this project's registry being applied blindly.
+// The registry only points at EXISTING VISUALIZER_CONFIGS keys; model
+// definitions are not duplicated here. A chapter with no entry is shown as
+// "coming soon" until an entry is added in code.
+// LIMITS: this is application-level logic. It cannot prevent a direct SQL
+// rename/delete or a concurrent change made between a check and a write.
+const LAB_REGISTRY_PROJECT_REF = "nvbaykuuxjzjeafpoexi";
+const LAB_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const LAB_CHAPTER_UUID_PAIRS = Object.freeze([
+  ["22222222-0001-0001-0001-000000000001", "The Living World"],
+  ["22222222-0001-0001-0002-000000000002", "Biological Classification"],
+  ["22222222-0001-0001-0003-000000000003", "Plant Kingdom"],
+  ["22222222-0001-0001-0004-000000000004", "Animal Kingdom"],
+  ["22222222-0001-0002-0001-000000000005", "Morphology of Flowering Plants"],
+  ["22222222-0001-0002-0002-000000000006", "Anatomy of Flowering Plants"],
+  ["22222222-0001-0002-0003-000000000007", "Structural Organisation in Animals"],
+  ["22222222-0001-0003-0001-000000000008", "Cell: The Unit of Life"],
+  ["22222222-0001-0003-0002-000000000009", "Biomolecules"],
+  ["22222222-0001-0003-0003-000000000010", "Cell Cycle and Cell Division"],
+  ["22222222-0001-0004-0001-000000000011", "Photosynthesis in Higher Plants"],
+  ["22222222-0001-0004-0002-000000000012", "Respiration in Plants"],
+  ["22222222-0001-0004-0003-000000000013", "Plant Growth and Development"],
+  ["22222222-0001-0005-0001-000000000014", "Breathing and Exchange of Gases"],
+  ["22222222-0001-0005-0002-000000000015", "Body Fluids and Circulation"],
+  // DB display name is "Excretory Products and their Elimination"; the UUID
+  // maps to the existing Lab key. The chapter is NOT renamed.
+  ["22222222-0001-0005-0003-000000000016", "Excretory Products and Elimination"],
+  ["22222222-0001-0005-0004-000000000017", "Locomotion and Movement"],
+  ["22222222-0001-0005-0005-000000000018", "Neural Control and Coordination"],
+  ["22222222-0001-0005-0006-000000000019", "Chemical Coordination and Integration"],
+  ["22222222-0002-0006-0001-000000000020", "Sexual Reproduction in Flowering Plants"],
+  ["22222222-0002-0006-0002-000000000021", "Human Reproduction"],
+  ["22222222-0002-0006-0003-000000000022", "Reproductive Health"],
+  ["22222222-0002-0007-0001-000000000023", "Principles of Inheritance and Variation"],
+  ["22222222-0002-0007-0002-000000000024", "Molecular Basis of Inheritance"],
+  ["22222222-0002-0007-0003-000000000025", "Evolution"],
+  ["22222222-0002-0008-0001-000000000026", "Human Health and Disease"],
+  ["22222222-0002-0008-0002-000000000027", "Microbes in Human Welfare"],
+  ["22222222-0002-0009-0001-000000000028", "Biotechnology: Principles and Processes"],
+  ["22222222-0002-0009-0002-000000000029", "Biotechnology and its Applications"],
+  ["22222222-0002-0010-0001-000000000030", "Organisms and Populations"],
+  ["22222222-0002-0010-0002-000000000031", "Ecosystem"],
+  ["22222222-0002-0010-0003-000000000032", "Biodiversity and Conservation"],
+]);
+const LAB_CHAPTER_REGISTRIES = Object.freeze({ [LAB_REGISTRY_PROJECT_REF]: LAB_CHAPTER_UUID_PAIRS });
+
+// "https://<ref>.supabase.co" -> "<ref>"; anything else -> null (no secrets read).
+function getSupabaseProjectRef(url) {
+  try {
+    const m = /^([a-z0-9]+)\.supabase\.co$/i.exec(new URL(String(url)).hostname);
+    return m ? m[1].toLowerCase() : null;
+  } catch { return null; }
+}
+const LAB_ACTIVE_PROJECT_REF = getSupabaseProjectRef(SUPABASE_URL);
+const labHas = (obj, k) => !!obj && Object.prototype.hasOwnProperty.call(obj, k);
+
+// Validates a registry. Fails closed per entry: a malformed, duplicated,
+// ambiguous or unresolvable entry is excluded from `byUuid` and reported.
+function validateLabRegistry(pairs, configs = VISUALIZER_CONFIGS, models = PROCEDURAL_3D_MODELS) {
+  const errors = [], byUuid = new Map(), invalid = new Map();
+  if (!Array.isArray(pairs)) {
+    return { valid: false, errors: [{ code: "malformed-registry", message: "Registry is not a list." }], byUuid, invalid };
+  }
+  const norm = (p) => (Array.isArray(p) && typeof p[0] === "string" ? p[0].toLowerCase() : null);
+  const uuidCount = new Map(), keyCount = new Map();
+  pairs.forEach(p => {
+    const u = norm(p); if (u) uuidCount.set(u, (uuidCount.get(u) || 0) + 1);
+    if (Array.isArray(p) && typeof p[1] === "string") keyCount.set(p[1], (keyCount.get(p[1]) || 0) + 1);
+  });
+  pairs.forEach((p, index) => {
+    const uuid = norm(p), key = Array.isArray(p) ? p[1] : undefined;
+    const bad = (code, message) => { errors.push({ code, index, uuid, key, message }); if (uuid && !invalid.has(uuid)) invalid.set(uuid, message); };
+    if (!uuid || typeof key !== "string" || !key) return bad("malformed-entry", "Entry must be [uuid, labKey].");
+    if (!LAB_UUID_RE.test(uuid)) return bad("malformed-uuid", "Chapter id is not a valid UUID.");
+    if (uuidCount.get(uuid) > 1) return bad("duplicate-uuid", "UUID is mapped more than once.");
+    if (keyCount.get(key) > 1) return bad("duplicate-key", `Lab key "${key}" is mapped by more than one UUID.`);
+    if (!labHas(configs, key)) return bad("missing-config", `No Virtual Lab configuration named "${key}".`);
+    const model = configs[key]?.model3D?.proceduralModel;
+    if (typeof model !== "string" || !labHas(models, model)) return bad("missing-model", `Lab "${key}" has no valid procedural 3D model.`);
+    byUuid.set(uuid, key);
+  });
+  return { valid: errors.length === 0, errors, byUuid, invalid };
+}
+
+// Classifies a chapter. Statuses:
+//   static          no database UUID (static syllabus fallback) - never resolved by name
+//   mapped          UUID registered and valid -> config/model resolved by UUID only
+//   mapping-missing valid UUID NOT registered, but its name equals a Lab key -> error, NO name fallback
+//   new             valid UUID not registered and no Lab key of that name -> "coming soon"
+//   invalid         UUID registered but its entry is invalid/ambiguous -> fail closed
+//   env-unavailable no registry for the active Supabase project -> mapping disabled
+function resolveLabForChapter(chapter, opts = {}) {
+  const { projectRef = LAB_ACTIVE_PROJECT_REF, registries = LAB_CHAPTER_REGISTRIES, configs = VISUALIZER_CONFIGS, models = PROCEDURAL_3D_MODELS } = opts;
+  const id = chapter?.id;
+  const name = chapter?.chapter_name || chapter?.title || "";
+  const base = { chapterId: typeof id === "string" ? id : null, chapterName: name };
+  if (chapter?._staticFallback === true || typeof id !== "string" || !LAB_UUID_RE.test(id)) return { ...base, status: "static" };
+  const uuid = id.toLowerCase();
+  const pairs = projectRef && labHas(registries, projectRef) ? registries[projectRef] : null;
+  if (!pairs) return { ...base, status: "env-unavailable" };
+  const v = validateLabRegistry(pairs, configs, models);
+  const withV = { ...base, registryValid: v.valid };
+  if (v.invalid.has(uuid)) return { ...withV, status: "invalid", reason: v.invalid.get(uuid) };
+  if (v.byUuid.has(uuid)) {
+    const key = v.byUuid.get(uuid), config = configs[key];
+    return { ...withV, status: "mapped", key, config, model: config.model3D.proceduralModel };
+  }
+  return { ...withV, status: labHas(configs, name) ? "mapping-missing" : "new" };
+}
+
+// CMS deletion guard (fail closed). Only database-backed chapters are checked;
+// a chapter with no valid UUID can never resolve to a Lab.
+function labChapterDeleteGuard(chapter, opts) {
+  const r = resolveLabForChapter(chapter, opts);
+  const block = (reason) => ({ blocked: true, reason, status: r.status });
+  if (r.status === "static" || r.status === "new") {
+    return r.status === "new" && r.registryValid === false
+      ? block("The Virtual Lab mapping failed its integrity check, so it cannot be verified that this chapter has no Lab. Deletion is blocked.")
+      : { blocked: false, reason: null, status: r.status };
+  }
+  if (r.status === "mapped") return block("This chapter has a Virtual Lab mapped to it by UUID. Deleting it would disconnect the Lab, so deletion is blocked.");
+  if (r.status === "mapping-missing") return block("This chapter's name matches an existing Virtual Lab but its UUID is not registered. Deletion is blocked until the mapping is reviewed.");
+  if (r.status === "invalid") return block(`This chapter's Virtual Lab mapping is invalid (${r.reason}). Deletion is blocked.`);
+  return block("The Virtual Lab mapping is unavailable for this Supabase project, so it cannot be verified whether this chapter has a Lab. Deletion is blocked.");
+}
+function labUnitDeleteGuard(unit, opts) {
+  for (const ch of (unit?.chapters || [])) {
+    const g = labChapterDeleteGuard(ch, opts);
+    if (g.blocked) return { ...g, reason: `A chapter in this unit ("${ch?.chapter_name || ""}") is protected. ${g.reason}` };
+  }
+  return { blocked: false, reason: null, status: "static" };
+}
+const LAB_STATUS_LABEL = {
+  mapped: "Lab: mapped by UUID", "mapping-missing": "Lab: mapping missing", invalid: "Lab: mapping invalid",
+  "env-unavailable": "Lab: mapping unavailable", new: "Lab: not mapped", static: "Lab: n/a",
+};
+
+// Shown by Visualizer instead of a lab when a chapter has no usable mapping.
+function LabUnavailableCard({ resolution }) {
+  const s = resolution?.status;
+  const diag = `Chapter: ${resolution?.chapterName || "(unnamed)"}${resolution?.chapterId ? ` | UUID: ${resolution.chapterId}` : ""}`;
+  if (s === "mapping-missing" || s === "invalid" || s === "env-unavailable") {
+    const title = s === "env-unavailable" ? "Virtual Lab unavailable in this environment" : "Virtual Lab mapping error";
+    const body = s === "env-unavailable"
+      ? "The Virtual Lab mapping is not configured for this Supabase project, so labs are disabled here."
+      : s === "invalid"
+        ? `This chapter's Lab mapping is invalid: ${resolution.reason}`
+        : "This chapter's UUID is not registered for the Virtual Lab, so it was not opened by name. Ask an admin to review the mapping.";
+    return (
+      <div role="alert" style={{ ...S.card, textAlign: "center", padding: "44px 24px", border: `1.5px solid ${T.amber}` }}>
+        <div style={{ fontSize: 38, marginBottom: 10 }}>⚠️</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: T.textLight, maxWidth: 420, margin: "0 auto 8px" }}>{body}</div>
+        {s !== "env-unavailable" && <div style={{ fontSize: 11.5, color: T.textFaint }}>{diag}</div>}
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...S.card, textAlign: "center", padding: "44px 24px" }}>
+      <div style={{ fontSize: 38, marginBottom: 10 }}>🧬</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Virtual Lab coming soon for this chapter</div>
+      <div style={{ fontSize: 12.5, color: T.textFaint, maxWidth: 380, margin: "0 auto" }}>
+        This is the foundation of BioVerse's Virtual Biology Lab — interactive content is added chapter by chapter.
+      </div>
+    </div>
+  );
+}
+
 // ── MotionParticles3D — the 3D counterpart to the 2D Visualizer's
 // MotionLayer/SMIL particles. JSON-driven (reads a step's `flows3D`
 // array — see schema comments in VISUALIZER_CONFIGS) and fully generic:
@@ -15112,8 +15285,8 @@ function CameraRig({ controlsRef, focusRequest }) {
 // later GLTF/animation phase) but only `model` (the procedural key) is
 // used today.
 function Biology3DViewer({ chapter, model, animation }) {
-  const chapterName = chapter?.chapter_name || chapter?.title || "";
-  const config = VISUALIZER_CONFIGS[chapterName];
+  const labResolution = resolveLabForChapter(chapter);
+  const config = labResolution.status === "mapped" ? labResolution.config : undefined;
   const model3D = config?.model3D;
   const labelById = useMemo(() => {
     const m = new Map();
@@ -15352,24 +15525,14 @@ function Biology3DViewer({ chapter, model, animation }) {
 }
 
 function Visualizer({ chapter, animation, model }) {
-  const chapterName = chapter?.chapter_name || chapter?.title || "";
-  const config = VISUALIZER_CONFIGS[chapterName];
+  const labResolution = resolveLabForChapter(chapter);
+  const config = labResolution.status === "mapped" ? labResolution.config : undefined;
   // 2D remains the default view — it's the proven, fully-featured mode;
   // 3D is an opt-in preview of the Phase 3C foundation.
   const [mode, setMode] = useState("2d");
   const isNarrow = useIsNarrow(720);
 
-  if (!config) {
-    return (
-      <div style={{ ...S.card, textAlign: "center", padding: "44px 24px" }}>
-        <div style={{ fontSize: 38, marginBottom: 10 }}>🧬</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Virtual Lab coming soon for this chapter</div>
-        <div style={{ fontSize: 12.5, color: T.textFaint, maxWidth: 380, margin: "0 auto" }}>
-          This is the foundation of BioVerse's Virtual Biology Lab — interactive content is added chapter by chapter.
-        </div>
-      </div>
-    );
-  }
+  if (!config) return <LabUnavailableCard resolution={labResolution} />;
 
   const segments = [{ key: "2d", label: "2D Diagram" }, { key: "3d", label: "3D Lab" }];
   const activeIdx = segments.findIndex(s => s.key === mode);
@@ -21091,7 +21254,7 @@ function AdminDashboard({ admin }) {
 const cmsImpactBlocks = (impact) => !Array.isArray(impact) || impact.length === 0 || impact.some(i => i.count > 0 || !i.verified);
 
 // Small name + order form shared by the unit and chapter create/edit dialogs.
-function CmsNameOrderForm({ title, nameLabel, placeholder, initialName, initialOrder, submitLabel, busy, error, onSubmit, onClose }) {
+function CmsNameOrderForm({ title, nameLabel, placeholder, initialName, initialOrder, submitLabel, busy, error, onSubmit, onClose, labKey }) {
   const [name, setName] = useState(initialName || "");
   const [order, setOrder] = useState(String(initialOrder ?? ""));
   const [localError, setLocalError] = useState("");
@@ -21109,6 +21272,11 @@ function CmsNameOrderForm({ title, nameLabel, placeholder, initialName, initialO
       {shownError && <div role="alert" style={{ background:A.redLight, border:"1px solid #FCA5A5", borderRadius:"9px", padding:"10px 13px", color:A.red, fontSize:"13px", marginBottom:"13px" }}>{shownError}</div>}
       <label style={AS.label} htmlFor="cms-name">{nameLabel}</label>
       <input id="cms-name" style={AS.input} value={name} onChange={e=>setName(e.target.value)} placeholder={placeholder} disabled={busy}/>
+      {labKey && name.trim() !== labKey && (
+        <div role="note" style={{ background:A.amberLight, borderRadius:"9px", padding:"9px 12px", color:"#92400E", fontSize:"12px", marginTop:"-6px", marginBottom:"12px" }}>
+          This chapter is linked to its Virtual Lab ("{labKey}") by UUID, so renaming it will not disconnect the Lab. The name differs from the registered Lab key.
+        </div>
+      )}
       <label style={AS.label} htmlFor="cms-order">Order</label>
       <input id="cms-order" style={AS.input} type="number" min="0" value={order} onChange={e=>setOrder(e.target.value)} disabled={busy}/>
       <div style={{ display:"flex", gap:8 }}>
@@ -21126,7 +21294,7 @@ function CmsNameOrderForm({ title, nameLabel, placeholder, initialName, initialO
 // database cascades (migration 01), so a one-click delete must never exist.
 // NOTE: these checks run in the browser; they cannot exclude a record created
 // in the same instant. Only database constraints can close that gap.
-function CmsDeleteDialog({ kind, name, phase, impact, error, busy, onRetry, onConfirm, onClose }) {
+function CmsDeleteDialog({ kind, name, phase, impact, error, busy, onRetry, onConfirm, onClose, labReason }) {
   const [typed, setTyped] = useState("");
   const matches = typed.trim() === String(name).trim();
   const withData = impact.filter(i => i.count > 0);
@@ -21135,6 +21303,14 @@ function CmsDeleteDialog({ kind, name, phase, impact, error, busy, onRetry, onCo
     <Modal title={`Delete ${kind}`} onClose={busy ? () => {} : onClose} width="500px">
       <div style={{ fontSize:"13.5px", fontWeight:"600", color:A.navy, marginBottom:"10px" }}>“{name}”</div>
       {phase === "checking" && <div role="status" style={{ color:A.slateLight, fontSize:"13px" }}>Checking what depends on this {kind}…</div>}
+      {phase === "labBlocked" && (
+        <div>
+          <div role="alert" style={{ background:A.amberLight, borderRadius:"9px", padding:"11px 13px", color:"#92400E", fontSize:"13px", marginBottom:"12px" }}>
+            <strong>Deletion blocked (Virtual Lab).</strong> {labReason}
+          </div>
+          <button onClick={onClose} style={{ ...AS.btn, ...AS.btnOutline }}>Close</button>
+        </div>
+      )}
       {phase === "unverified" && (
         <div>
           <div role="alert" style={{ background:A.redLight, borderRadius:"9px", padding:"10px 13px", color:A.red, fontSize:"13px", marginBottom:"12px" }}>
@@ -21273,7 +21449,12 @@ function ContentCMS() {
   // ---- deletion -----------------------------------------------------------
   const fetchImpact = (kind, item) => kind === "unit" ? sb.getUnitDeleteImpact(item.id) : sb.getChapterDeleteImpact(item.id);
 
+  // Virtual Lab guard: runs first, synchronously, before any network check.
+  const labGuard = (kind, item) => kind === "unit" ? labUnitDeleteGuard(item) : labChapterDeleteGuard(item);
+
   const checkImpact = async (kind, item) => {
+    const lg = labGuard(kind, item);
+    if (lg.blocked) { setDel({ kind, item, phase: "labBlocked", impact: [], error: "", labReason: lg.reason }); return; }
     setDel({ kind, item, phase: "checking", impact: [], error: "" });
     try {
       const impact = await fetchImpact(kind, item);
@@ -21290,6 +21471,9 @@ function ContentCMS() {
     const { kind, item } = del;
     let stage = "recheck";
     try {
+      // Re-run the Lab guard immediately before deleting (fail closed).
+      const lg = labGuard(kind, item);
+      if (lg.blocked) { setDel({ kind, item, phase: "labBlocked", impact: [], error: "", labReason: lg.reason }); return; }
       // Re-verify immediately before deleting: new content may have been added
       // since the dialog opened, and the database would cascade through it.
       const impact = await fetchImpact(kind, item);
@@ -21375,7 +21559,7 @@ function ContentCMS() {
                         <span style={{ fontSize:"10.5px", fontWeight:"700", color:A.slateLight, width:"22px", textAlign:"center" }}>{ci+1}</span>
                         <div>
                           <div style={{ fontSize:"13px", fontWeight:"600", color:A.navy }}>{ch.chapter_name}</div>
-                          <div style={{ fontSize:"11.5px", color:A.slateLight }}>order {ch.order_number ?? 0}</div>
+                          <div style={{ fontSize:"11.5px", color:A.slateLight }}>order {ch.order_number ?? 0} · <span data-testid="lab-status">{LAB_STATUS_LABEL[resolveLabForChapter(ch).status]}</span>{resolveLabForChapter(ch).status === "mapped" && resolveLabForChapter(ch).key !== ch.chapter_name ? ` ("${resolveLabForChapter(ch).key}")` : ""}</div>
                         </div>
                       </div>
                       <div style={{ display:"flex", gap:6 }}>
@@ -21399,11 +21583,12 @@ function ContentCMS() {
       {(modal?.type==="addChapter"||modal?.type==="editChapter")&&(
         <CmsNameOrderForm key={modal.type+(modal.chapter?.id||modal.unit?.id||"")} title={modal.type==="addChapter"?`Add Chapter — ${modal.unit.name}`:"Edit Chapter"} nameLabel="Chapter name" placeholder="e.g. Biotechnology Tools"
           initialName={modal.chapter?.chapter_name} initialOrder={modal.type==="editChapter"?modal.chapter.order_number:nextOrder(modal.unit.chapters||[])}
+          labKey={modal.type==="editChapter" && resolveLabForChapter(modal.chapter).status==="mapped" ? resolveLabForChapter(modal.chapter).key : undefined}
           submitLabel={modal.type==="addChapter"?"Save Chapter":"Save Changes"} busy={busy} error={formError} onSubmit={submitChapter} onClose={closeModal}/>
       )}
       {del && (
         <CmsDeleteDialog kind={del.kind} name={del.kind==="unit"?del.item.name:del.item.chapter_name} phase={del.phase} impact={del.impact} error={del.error}
-          busy={busy} onRetry={()=>checkImpact(del.kind, del.item)} onConfirm={confirmDelete} onClose={()=>{ if(!busyRef.current) setDel(null); }}/>
+          labReason={del.labReason} busy={busy} onRetry={()=>checkImpact(del.kind, del.item)} onConfirm={confirmDelete} onClose={()=>{ if(!busyRef.current) setDel(null); }}/>
       )}
     </div>
   );
@@ -26661,4 +26846,4 @@ export default function App() {
 // edits will be overwritten on the next "npm test". The real deliverable
 // at src/App.jsx / outputs/App.jsx is NOT modified — this block does not
 // exist there.
-export { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram, DIAGRAM_SVG_COMPONENTS, sb, ConnectedNotesTab, NotesView, PdfPageRenderer, ConnectedQuestionsTab, ConnectedTestsTab, QuestionsView, QuizPlayer, useAnswerReveal, ANSWER_LOCKED_MSG, SyllabusView, ChapterPage, AITutor, StudyPlanner, ProfileView, useIsNarrow, useUiMode, UI_MODES, UI_MODE_STORAGE_KEY, BioVisionShell, CurrentShell, ActivePage, BioVisionNav, BIOVISION_NAV_ITEMS, GlobalAppStyles, Modal, Confirm, ContentCMS, CMS_CHAPTER_DEPENDENTS, CMS_RLS_FULLY_VISIBLE, bnReadSid, bnNewSid, BackNav, useBackLayer, useAppBackSync, bnMakeSnap, BioVisionHome, Dashboard, useDashboardData, callBioAI, TestsView, RewardsStore, RoleSelect, resolveStructureTap, useStructureTouchHandlers, LabelMode, ExploreMode, MismatchMode, DG_TAP_SLOP_PX, DG_CLICK_SUPPRESS_MS };
+export { DiagramGame, DiagramCenter, DIAGRAM_DATA, normalizeDiagram, DIAGRAM_SVG_COMPONENTS, sb, ConnectedNotesTab, NotesView, PdfPageRenderer, ConnectedQuestionsTab, ConnectedTestsTab, QuestionsView, QuizPlayer, useAnswerReveal, ANSWER_LOCKED_MSG, SyllabusView, ChapterPage, AITutor, StudyPlanner, ProfileView, useIsNarrow, useUiMode, UI_MODES, UI_MODE_STORAGE_KEY, BioVisionShell, CurrentShell, ActivePage, BioVisionNav, BIOVISION_NAV_ITEMS, GlobalAppStyles, Modal, Confirm, ContentCMS, Visualizer, Biology3DViewer, VISUALIZER_CONFIGS, PROCEDURAL_3D_MODELS, LAB_REGISTRY_PROJECT_REF, LAB_CHAPTER_UUID_PAIRS, LAB_CHAPTER_REGISTRIES, LAB_UUID_RE, getSupabaseProjectRef, validateLabRegistry, resolveLabForChapter, labChapterDeleteGuard, labUnitDeleteGuard, CMS_CHAPTER_DEPENDENTS, CMS_RLS_FULLY_VISIBLE, bnReadSid, bnNewSid, BackNav, useBackLayer, useAppBackSync, bnMakeSnap, BioVisionHome, Dashboard, useDashboardData, callBioAI, TestsView, RewardsStore, RoleSelect, resolveStructureTap, useStructureTouchHandlers, LabelMode, ExploreMode, MismatchMode, DG_TAP_SLOP_PX, DG_CLICK_SUPPRESS_MS };
