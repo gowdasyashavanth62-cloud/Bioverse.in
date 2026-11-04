@@ -1295,7 +1295,7 @@ const CMS_CHAPTER_DEPENDENTS = [
 // (concepts) is weak evidence of visibility; the counts do not prove that
 // deletion is safe, only that a non-zero dependent would be seen. A table not
 // listed here is unverified, so a zero count from it blocks deletion.
-const CMS_RLS_FULLY_VISIBLE = { chapters: true, videos: true, notes: true, questions: true, tests: true, progress: true, community_posts: true, concepts: true, student_questions: true, game_sessions: true };
+const CMS_RLS_FULLY_VISIBLE = { chapters: true, videos: true, notes: true, questions: true, tests: true, progress: true, community_posts: true, concepts: false, student_questions: true, game_sessions: true };
 
 const sb = {
   _url: SUPABASE_URL,

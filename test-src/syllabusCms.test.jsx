@@ -297,6 +297,44 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
     expect(del).not.toHaveBeenCalled();
   });
 
+  describe("concepts dependency is fail-closed (visibility unverified)", () => {
+    it("the real impact check (not a stubbed list) marks a concepts count of 0 as unverified and blocks deletion", async () => {
+      const del = spy("deleteChapter", async () => []);
+      spy("_count", async () => 0); // every table reports zero rows; nothing is stubbed above _count
+      await openChapterDelete();
+      expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
+      expect(screen.getByText(/zero count is not trusted/)).toBeInTheDocument();
+      expect(screen.getByText("concepts")).toBeInTheDocument(); // the unverified dependency is named
+      expect(screen.queryByLabelText(/Type the chapter name/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Permanently delete/ })).not.toBeInTheDocument();
+      expect(del).not.toHaveBeenCalled();
+    });
+    it("concepts {count: 0, verified: false} blocks even when all eight other dependents are verified zero", async () => {
+      const del = spy("deleteChapter", async () => []);
+      spy("getChapterDeleteImpact", async () => mk({ concepts: { verified: false } }));
+      await openChapterDelete();
+      expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
+      expect(screen.getByText(/zero count is not trusted/)).toBeInTheDocument();
+      expect(screen.getByText("concepts")).toBeInTheDocument();
+      expect(del).not.toHaveBeenCalled();
+    });
+    it("a VERIFIED zero concepts count keeps the existing safe behaviour (typed confirmation, then delete)", async () => {
+      const del = spy("deleteChapter", async () => [{ id: "c1" }]);
+      spy("getChapterDeleteImpact", async () => mk({ concepts: { verified: true } }));
+      await openChapterDelete();
+      fireEvent.change(await screen.findByLabelText(/Type the chapter name/), { target: { value: "The Living World" } });
+      expect(screen.queryByText(/Deletion blocked/)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Permanently delete/ }));
+      await waitFor(() => expect(del).toHaveBeenCalledWith("c1"));
+    });
+    it("only concepts is unverified: no other visibility flag changed", async () => {
+      spy("_count", async () => 0);
+      const r = await sb.getChapterDeleteImpact("c1");
+      expect(r.map(i => [i.key, i.verified])).toEqual(CH_KEYS.map(k => [k, k !== "concepts"]));
+      expect((await sb.getUnitDeleteImpact("u1"))[0]).toMatchObject({ key: "chapters", verified: true });
+    });
+  });
+
   it("an empty impact list is never treated as safe", async () => {
     const del = spy("deleteChapter", async () => []);
     spy("getChapterDeleteImpact", async () => []);
@@ -473,7 +511,10 @@ describe("sb syllabus helpers — never fake success", () => {
     });
     const r = await sb.getChapterDeleteImpact("c1");
     expect(r.map(i => [i.key, i.count])).toEqual(Object.entries(counts));
-    expect(r.filter(i => !i.verified)).toEqual([]); // all nine verified (live admin-visibility check)
+    // Eight dependents are verified-visible. `concepts` is deliberately UNVERIFIED: the live audit only
+    // saw zero rows, which does not establish full admin RLS visibility, so its count is never trusted.
+    expect(r.filter(i => !i.verified).map(i => i.key)).toEqual(["concepts"]);
+    expect(r.find(i => i.key === "concepts")).toMatchObject({ count: 1, verified: false });
     expect(r.find(i => i.key === "student_questions")).toMatchObject({ count: 7, verified: true });
     expect(CMS_CHAPTER_DEPENDENTS.map(d => d[0])).toEqual(CH_KEYS);
     fetchMock.mockReset();
