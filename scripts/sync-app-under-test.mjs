@@ -37,7 +37,7 @@ const TEST_ONLY_EXPORTS = [
   "SyllabusView", "ChapterPage", "AITutor", "StudyPlanner", "ProfileView", "useIsNarrow",
   "useUiMode", "UI_MODES", "UI_MODE_STORAGE_KEY",
   "BioVisionShell", "CurrentShell", "ActivePage", "BioVisionNav", "BIOVISION_NAV_ITEMS", "GlobalAppStyles",
-  "Modal", "Confirm", "bnReadSid", "bnNewSid", "BackNav", "useBackLayer", "useAppBackSync", "bnMakeSnap", "BioVisionHome", "Dashboard", "useDashboardData", "callBioAI", "TestsView", "RewardsStore", "RoleSelect", "resolveStructureTap", "useStructureTouchHandlers", "LabelMode", "ExploreMode", "MismatchMode", "DG_TAP_SLOP_PX", "DG_CLICK_SUPPRESS_MS",
+  "Modal", "Confirm", "ContentCMS", "Visualizer", "Biology3DViewer", "VISUALIZER_CONFIGS", "PROCEDURAL_3D_MODELS", "LAB_REGISTRY_PROJECT_REF", "LAB_CHAPTER_UUID_PAIRS", "LAB_CHAPTER_REGISTRIES", "LAB_UUID_RE", "getSupabaseProjectRef", "validateLabRegistry", "resolveLabForChapter", "labChapterDeleteGuard", "labUnitDeleteGuard", "CMS_CHAPTER_DEPENDENTS", "CMS_RLS_FULLY_VISIBLE", "bnReadSid", "bnNewSid", "BackNav", "useBackLayer", "useAppBackSync", "bnMakeSnap", "BioVisionHome", "Dashboard", "useDashboardData", "callBioAI", "TestsView", "RewardsStore", "RoleSelect", "resolveStructureTap", "useStructureTouchHandlers", "LabelMode", "ExploreMode", "MismatchMode", "DG_TAP_SLOP_PX", "DG_CLICK_SUPPRESS_MS",
 ];
 
 const TRAILER = `
