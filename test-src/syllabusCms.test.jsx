@@ -10,8 +10,8 @@ const UNITS_1ST = [
   ]},
   { id: "u2", name: "Unit II – Structure", level: "1st PU", order_number: 5, chapters: [] },
 ];
-const CH_KEYS = ["concepts","videos","notes","questions","tests","progress","student_questions","community_posts","game_sessions"];
-const CH_LABEL = { progress: "student progress records", student_questions: "student-submitted questions", community_posts: "community posts", game_sessions: "game sessions" };
+const CH_KEYS = ["concepts","videos","notes","questions","tests","progress","community_posts","game_sessions"];
+const CH_LABEL = { progress: "student progress records", community_posts: "community posts", game_sessions: "game sessions" };
 const mk = (over = {}) => CH_KEYS.map(key => ({ key, label: CH_LABEL[key] || key, reason: `reason-${key}`, count: 0, verified: true, ...(over[key] || {}) }));
 const CH_ZERO = mk();
 
@@ -274,7 +274,7 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
     await ready(); expand("Unit I – Diversity");
     fireEvent.click(screen.getByLabelText("Delete chapter The Living World"));
   };
-  it.each([["concepts"], ["student_questions"], ["community_posts"], ["game_sessions"], ["questions"], ["tests"], ["notes"]])("blocks when %s exist, explains why, and never calls deleteChapter", async (key) => {
+  it.each([["concepts"], ["community_posts"], ["game_sessions"], ["questions"], ["tests"], ["notes"]])("blocks when %s exist, explains why, and never calls deleteChapter", async (key) => {
     const del = spy("deleteChapter", async () => []);
     spy("getChapterDeleteImpact", async () => mk({ [key]: { count: 2 } }));
     await openChapterDelete();
@@ -287,11 +287,11 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
 
   it("a zero from a table whose admin visibility is NOT verified does not allow deletion (fail-closed)", async () => {
     const del = spy("deleteChapter", async () => []);
-    spy("getChapterDeleteImpact", async () => mk({ student_questions: { verified: false }, game_sessions: { verified: false } }));
+    spy("getChapterDeleteImpact", async () => mk({ community_posts: { verified: false }, game_sessions: { verified: false } }));
     await openChapterDelete();
     expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
     expect(screen.getByText(/zero count is not trusted/)).toBeInTheDocument();
-    expect(screen.getByText("student-submitted questions")).toBeInTheDocument();
+    expect(screen.getByText("community posts")).toBeInTheDocument();
     expect(screen.getByText("game sessions")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Type the chapter name/)).not.toBeInTheDocument();
     expect(del).not.toHaveBeenCalled();
@@ -309,7 +309,7 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
       expect(screen.queryByRole("button", { name: /Permanently delete/ })).not.toBeInTheDocument();
       expect(del).not.toHaveBeenCalled();
     });
-    it("concepts {count: 0, verified: false} blocks even when all eight other dependents are verified zero", async () => {
+    it("concepts {count: 0, verified: false} blocks even when all seven other dependents are verified zero", async () => {
       const del = spy("deleteChapter", async () => []);
       spy("getChapterDeleteImpact", async () => mk({ concepts: { verified: false } }));
       await openChapterDelete();
@@ -369,9 +369,9 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
     const impact = spy("getChapterDeleteImpact", async () => CH_ZERO);
     await openChapterDelete();
     fireEvent.change(await screen.findByLabelText(/Type the chapter name/), { target: { value: "The Living World" } });
-    impact.mockImplementation(async () => { throw new Error("Count failed for student_questions (HTTP 500)"); });
+    impact.mockImplementation(async () => { throw new Error("Count failed for community_posts (HTTP 500)"); });
     fireEvent.click(screen.getByRole("button", { name: "Permanently delete chapter" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Count failed for student_questions");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Count failed for community_posts");
     expect(del).not.toHaveBeenCalled();
     expect(screen.queryByText(/Chapter deleted\./)).not.toBeInTheDocument();
   });
@@ -380,7 +380,7 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
     spy("getChapterDeleteImpact", async () => CH_ZERO);
     await openChapterDelete();
     await screen.findByLabelText(/Type the chapter name/);
-    expect(screen.getByText(/No dependent records were found in the 9 tables checked/)).toBeInTheDocument();
+    expect(screen.getByText(/No dependent records were found in the 8 tables checked/)).toBeInTheDocument();
     expect(screen.getByText(/deleting a chapter can permanently delete dependent database content through cascading relationships/)).toBeInTheDocument();
     expect(screen.getByText(/cannot rule out a record created at the same instant/)).toBeInTheDocument();
     expect(screen.getByText(/Storage PDF files are never deleted by this tool/)).toBeInTheDocument();
@@ -502,8 +502,8 @@ describe("sb syllabus helpers — never fake success", () => {
     await expect(sb._count("videos", "chapter_id=eq.c1")).rejects.toThrow("boom");
   });
 
-  it("getChapterDeleteImpact counts all nine dependents, all verified-visible; one failed count rejects the whole check", async () => {
-    const counts = { concepts: 1, videos: 2, notes: 3, questions: 4, tests: 5, progress: 6, student_questions: 7, community_posts: 8, game_sessions: 9 };
+  it("getChapterDeleteImpact counts all eight dependents; one failed count rejects the whole check", async () => {
+    const counts = { concepts: 1, videos: 2, notes: 3, questions: 4, tests: 5, progress: 6, community_posts: 7, game_sessions: 8 };
     fetchMock.mockImplementation(async (url) => {
       const t = /rest\/v1\/(\w+)\?/.exec(url)[1];
       expect(url).toMatch(/chapter_id=eq\.c1/);
@@ -511,11 +511,11 @@ describe("sb syllabus helpers — never fake success", () => {
     });
     const r = await sb.getChapterDeleteImpact("c1");
     expect(r.map(i => [i.key, i.count])).toEqual(Object.entries(counts));
-    // Eight dependents are verified-visible. `concepts` is deliberately UNVERIFIED: the live audit only
+    // Seven dependents are verified-visible. `concepts` is deliberately UNVERIFIED: the live audit only
     // saw zero rows, which does not establish full admin RLS visibility, so its count is never trusted.
     expect(r.filter(i => !i.verified).map(i => i.key)).toEqual(["concepts"]);
     expect(r.find(i => i.key === "concepts")).toMatchObject({ count: 1, verified: false });
-    expect(r.find(i => i.key === "student_questions")).toMatchObject({ count: 7, verified: true });
+    expect(r.find(i => i.key === "community_posts")).toMatchObject({ count: 7, verified: true });
     expect(CMS_CHAPTER_DEPENDENTS.map(d => d[0])).toEqual(CH_KEYS);
     fetchMock.mockReset();
     let n = 0;

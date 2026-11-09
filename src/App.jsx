@@ -1282,19 +1282,20 @@ const CMS_CHAPTER_DEPENDENTS = [
   ["questions", "questions", "Questions would be permanently deleted, along with their test links."],
   ["tests", "tests", "Tests would be permanently deleted, along with their question links and every student's results."],
   ["progress", "student progress records", "Student progress would be permanently deleted."],
-  ["student_questions", "student-submitted questions", "Student questions have no database protection; they would be orphaned."],
   ["community_posts", "community posts", "Community posts reference this chapter; the database refuses the delete while any exist."],
   ["game_sessions", "game sessions", "Game history would lose its chapter link (kept, but no longer attributable)."],
 ];
-// Tables whose FULL visibility to an admin through RLS is established.
-// chapters/videos/notes/questions/tests/progress/community_posts: SELECT
-// policies in supabase/migrations/03_rls_policies.sql (source-based).
-// concepts/student_questions/game_sessions: verified against the live project
-// with the admin-simulation SQL (visible rows == privileged rows: concepts
-// 0=0, student_questions 1633=1633, game_sessions 28=28). Note a 0=0 result
-// (concepts) is weak evidence of visibility; the counts do not prove that
-// deletion is safe, only that a non-zero dependent would be seen. A table not
-// listed here is unverified, so a zero count from it blocks deletion.
+// Tables whose FULL visibility to an admin through RLS is trusted when counting
+// dependents. A flag of true is a trust decision, not proof of the live policies.
+// chapters/videos/notes/questions/tests/progress/community_posts: assumed from the
+// SELECT policies in supabase/migrations/03_rls_policies.sql. Those migrations do
+// NOT fully represent the live database, so they are not evidence of current live
+// visibility. game_sessions: an earlier admin-simulation query saw visible rows ==
+// privileged rows (28=28). concepts is deliberately false: only a 0=0 result was
+// seen, which does not establish visibility, so a zero count from it never allows
+// deletion. A table not listed here, or set to false, is unverified: a zero count
+// from it blocks deletion. student_questions is a view over questions and is not
+// counted as a separate dependent; its flag below is not consulted for deletion.
 const CMS_RLS_FULLY_VISIBLE = { chapters: true, videos: true, notes: true, questions: true, tests: true, progress: true, community_posts: true, concepts: false, student_questions: true, game_sessions: true };
 
 const sb = {
