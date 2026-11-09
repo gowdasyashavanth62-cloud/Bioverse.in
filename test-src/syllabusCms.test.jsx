@@ -297,25 +297,23 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
     expect(del).not.toHaveBeenCalled();
   });
 
-  describe("concepts dependency is fail-closed (visibility unverified)", () => {
-    it("the real impact check (not a stubbed list) marks a concepts count of 0 as unverified and blocks deletion", async () => {
+  describe("dependency visibility: concepts is verified-visible; unverified dependencies stay fail-closed", () => {
+    it("the real impact check (not a stubbed list) treats a concepts count of 0 as a verified zero: no block, typed confirmation offered", async () => {
       const del = spy("deleteChapter", async () => []);
       spy("_count", async () => 0); // every table reports zero rows; nothing is stubbed above _count
       await openChapterDelete();
-      expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
-      expect(screen.getByText(/zero count is not trusted/)).toBeInTheDocument();
-      expect(screen.getByText("concepts")).toBeInTheDocument(); // the unverified dependency is named
-      expect(screen.queryByLabelText(/Type the chapter name/)).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Permanently delete/ })).not.toBeInTheDocument();
-      expect(del).not.toHaveBeenCalled();
+      expect(await screen.findByLabelText(/Type the chapter name/)).toBeInTheDocument();
+      expect(screen.queryByText(/Deletion blocked/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/zero count is not trusted/)).not.toBeInTheDocument();
+      expect(del).not.toHaveBeenCalled(); // nothing is deleted until the user confirms
     });
-    it("concepts {count: 0, verified: false} blocks even when all seven other dependents are verified zero", async () => {
+    it("a genuinely unverified dependency {count: 0, verified: false} still blocks even when all seven other dependents are verified zero", async () => {
       const del = spy("deleteChapter", async () => []);
-      spy("getChapterDeleteImpact", async () => mk({ concepts: { verified: false } }));
+      spy("getChapterDeleteImpact", async () => mk({ game_sessions: { verified: false } }));
       await openChapterDelete();
       expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
       expect(screen.getByText(/zero count is not trusted/)).toBeInTheDocument();
-      expect(screen.getByText("concepts")).toBeInTheDocument();
+      expect(screen.getByText("game sessions")).toBeInTheDocument();
       expect(del).not.toHaveBeenCalled();
     });
     it("a VERIFIED zero concepts count keeps the existing safe behaviour (typed confirmation, then delete)", async () => {
@@ -327,10 +325,17 @@ describe("ContentCMS — chapter deletion: every known dependent blocks, with a 
       fireEvent.click(screen.getByRole("button", { name: /Permanently delete/ }));
       await waitFor(() => expect(del).toHaveBeenCalledWith("c1"));
     });
-    it("only concepts is unverified: no other visibility flag changed", async () => {
+    it("a concepts count above zero still blocks deletion", async () => {
+      const del = spy("deleteChapter", async () => []);
+      spy("getChapterDeleteImpact", async () => mk({ concepts: { count: 2, verified: true } }));
+      await openChapterDelete();
+      expect(await screen.findByText(/Deletion blocked/)).toBeInTheDocument();
+      expect(del).not.toHaveBeenCalled();
+    });
+    it("all eight chapter dependents are verified-visible; the unit check's chapters dependency is verified", async () => {
       spy("_count", async () => 0);
       const r = await sb.getChapterDeleteImpact("c1");
-      expect(r.map(i => [i.key, i.verified])).toEqual(CH_KEYS.map(k => [k, k !== "concepts"]));
+      expect(r.map(i => [i.key, i.verified])).toEqual(CH_KEYS.map(k => [k, true]));
       expect((await sb.getUnitDeleteImpact("u1"))[0]).toMatchObject({ key: "chapters", verified: true });
     });
   });
@@ -511,10 +516,10 @@ describe("sb syllabus helpers — never fake success", () => {
     });
     const r = await sb.getChapterDeleteImpact("c1");
     expect(r.map(i => [i.key, i.count])).toEqual(Object.entries(counts));
-    // Seven dependents are verified-visible. `concepts` is deliberately UNVERIFIED: the live audit only
-    // saw zero rows, which does not establish full admin RLS visibility, so its count is never trusted.
-    expect(r.filter(i => !i.verified).map(i => i.key)).toEqual(["concepts"]);
-    expect(r.find(i => i.key === "concepts")).toMatchObject({ count: 1, verified: false });
+    // All eight dependents are verified-visible. Live inspection showed concepts has the
+    // concepts_public_read SELECT policy USING (true), so its count (and a zero) is trusted.
+    expect(r.filter(i => !i.verified)).toEqual([]);
+    expect(r.find(i => i.key === "concepts")).toMatchObject({ count: 1, verified: true });
     expect(r.find(i => i.key === "community_posts")).toMatchObject({ count: 7, verified: true });
     expect(CMS_CHAPTER_DEPENDENTS.map(d => d[0])).toEqual(CH_KEYS);
     fetchMock.mockReset();

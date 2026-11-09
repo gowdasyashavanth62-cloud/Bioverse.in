@@ -1285,18 +1285,19 @@ const CMS_CHAPTER_DEPENDENTS = [
   ["community_posts", "community posts", "Community posts reference this chapter; the database refuses the delete while any exist."],
   ["game_sessions", "game sessions", "Game history would lose its chapter link (kept, but no longer attributable)."],
 ];
-// Tables whose FULL visibility to an admin through RLS is trusted when counting
-// dependents. A flag of true is a trust decision, not proof of the live policies.
-// chapters/videos/notes/questions/tests/progress/community_posts: assumed from the
-// SELECT policies in supabase/migrations/03_rls_policies.sql. Those migrations do
-// NOT fully represent the live database, so they are not evidence of current live
-// visibility. game_sessions: an earlier admin-simulation query saw visible rows ==
-// privileged rows (28=28). concepts is deliberately false: only a 0=0 result was
-// seen, which does not establish visibility, so a zero count from it never allows
-// deletion. A table not listed here, or set to false, is unverified: a zero count
-// from it blocks deletion. student_questions is a view over questions and is not
-// counted as a separate dependent; its flag below is not consulted for deletion.
-const CMS_RLS_FULLY_VISIBLE = { chapters: true, videos: true, notes: true, questions: true, tests: true, progress: true, community_posts: true, concepts: false, student_questions: true, game_sessions: true };
+// Tables whose FULL visibility to an admin/teacher through RLS is trusted when
+// counting dependents. A flag of true is a trust decision based on the live
+// Supabase project (nvbaykuuxjzjeafpoexi) as inspected read-only: videos, notes,
+// questions, tests, progress, community_posts and game_sessions were confirmed fully
+// visible to admin/teacher (is_teacher_or_admin() is true for both roles), and
+// concepts has RLS enabled with the SELECT policy concepts_public_read USING (true),
+// so every row is visible and a zero count is a genuine zero. The old migrations in
+// supabase/migrations do NOT fully represent the live database and are not the
+// evidence for these flags. A table missing from this map, or set to false, is
+// unverified: a zero count from it never allows deletion (fail closed).
+// student_questions is a student-facing view over questions, not an independent
+// dependent; it is not in CMS_CHAPTER_DEPENDENTS and its flag is not consulted.
+const CMS_RLS_FULLY_VISIBLE = { chapters: true, videos: true, notes: true, questions: true, tests: true, progress: true, community_posts: true, concepts: true, student_questions: true, game_sessions: true };
 
 const sb = {
   _url: SUPABASE_URL,
